@@ -1,0 +1,52 @@
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { translations, languageNames } from '../locales/translations'
+import type { Language } from '../locales/translations'
+
+interface LanguageContextType {
+  language: Language
+  setLanguage: (lang: Language) => void
+  t: typeof translations.ru
+}
+
+const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
+
+const STORAGE_KEY = 'liftcare_language'
+
+export function LanguageProvider({ children }: { children: ReactNode }) {
+  const [language, setLanguageState] = useState<Language>('ru')
+
+  // Load language from localStorage on mount
+  useEffect(() => {
+    const savedLang = localStorage.getItem(STORAGE_KEY) as Language
+    if (savedLang && (savedLang === 'ru' || savedLang === 'kk' || savedLang === 'en')) {
+      setLanguageState(savedLang)
+    }
+  }, [])
+
+  // Save language to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, language)
+  }, [language])
+
+  const setLanguage = (lang: Language) => {
+    setLanguageState(lang)
+  }
+
+  const value: LanguageContextType = {
+    language,
+    setLanguage,
+    t: translations[language],
+  }
+
+  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>
+}
+
+export function useLanguage() {
+  const context = useContext(LanguageContext)
+  if (context === undefined) {
+    throw new Error('useLanguage must be used within a LanguageProvider')
+  }
+  return context
+}
+
+export { languageNames }
