@@ -836,11 +836,11 @@ export const translations = {
       engineer: 'Engineer',
       manager: 'Manager',
     },
-  },
-}
+  }, // Закрылся блок 'en'
+}; // Закрылся объект translations
 
 export const languageNames: Record<Language, string> = {
   ru: 'Русский',
   kk: 'Қазақша',
   en: 'English',
-}
+};
