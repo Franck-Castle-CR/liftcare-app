@@ -1,27 +1,13 @@
 import { Building2, Factory, Settings, ShoppingBag } from 'lucide-react'
+import { useLanguage } from '../context/LanguageContext'
 
 export default function ForWho() {
+  const { t } = useLanguage()
   const audiences = [
-    {
-      icon: Building2,
-      title: 'Управляющие компании',
-      description: 'Жилищные комплексы и офисные центры с лифтовым оборудованием',
-    },
-    {
-      icon: Factory,
-      title: 'Промышленные предприятия',
-      description: 'Заводы и производственные площадки с конвейерным оборудованием',
-    },
-    {
-      icon: Settings,
-      title: 'Сервисные компании',
-      description: 'Организации, предоставляющие услуги по ремонту и обслуживанию',
-    },
-    {
-      icon: ShoppingBag,
-      title: 'Торговые центры',
-      description: 'Моллы и розничные сети с автоматикой и эскалаторами',
-    },
+    { icon: Building2, ...t.landing.forWho.items.residential },
+    { icon: Factory, ...t.landing.forWho.items.industrial },
+    { icon: Settings, ...t.landing.forWho.items.service },
+    { icon: ShoppingBag, ...t.landing.forWho.items.retail },
   ]
 
   return (
@@ -29,10 +15,10 @@ export default function ForWho() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold text-dark-blue mb-4">
-            Для кого LiftCare
+            {t.landing.forWho.title}
           </h2>
           <p className="text-lg text-text-secondary max-w-2xl mx-auto">
-            Решение адаптировано под различные отрасли и типы бизнеса
+            {t.landing.forWho.subtitle}
           </p>
         </div>
 

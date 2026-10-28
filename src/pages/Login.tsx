@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { useLanguage } from '../context/LanguageContext'
 import { ArrowUpDown, User, LayoutDashboard, Wrench, BarChart3, CheckCircle } from 'lucide-react'
+import LanguageSelector from '../components/LanguageSelector'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -90,6 +91,7 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-bg-light-blue flex items-center justify-center p-4">
       <div className="w-full max-w-5xl">
+        <div className="flex justify-end mb-4"><LanguageSelector /></div>
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-2">

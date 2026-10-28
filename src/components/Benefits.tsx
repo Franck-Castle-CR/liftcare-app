@@ -1,27 +1,13 @@
 import { TrendingUp, Clock, ShieldCheck, Zap } from 'lucide-react'
+import { useLanguage } from '../context/LanguageContext'
 
 export default function Benefits() {
+  const { t } = useLanguage()
   const benefits = [
-    {
-      icon: TrendingUp,
-      title: 'На 40% быстрее',
-      description: 'Сокращение времени обработки заявок за счет автоматизации',
-    },
-    {
-      icon: Clock,
-      title: 'Сэкономьте время',
-      description: 'Меньше ручной работы и бумажных документов',
-    },
-    {
-      icon: ShieldCheck,
-      title: 'Прозрачность',
-      description: 'Полный контроль над состоянием оборудования в реальном времени',
-    },
-    {
-      icon: Zap,
-      title: 'Быстрый старт',
-      description: 'Внедрение за 2 недели без остановки работы',
-    },
+    { icon: TrendingUp, ...t.landing.benefits.items.faster },
+    { icon: Clock, ...t.landing.benefits.items.time },
+    { icon: ShieldCheck, ...t.landing.benefits.items.transparency },
+    { icon: Zap, ...t.landing.benefits.items.quick },
   ]
 
   return (
@@ -29,10 +15,10 @@ export default function Benefits() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold text-dark-blue mb-4">
-            Преимущества LiftCare
+            {t.landing.benefits.title}
           </h2>
           <p className="text-lg text-text-secondary max-w-2xl mx-auto">
-            Почему компании выбирают нашу платформу
+            {t.landing.benefits.subtitle}
           </p>
         </div>
 

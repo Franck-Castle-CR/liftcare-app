@@ -20,12 +20,14 @@ import {
 import { Activity, Clock, CheckCircle2, TrendingUp, Bell, Boxes, Building2, CalendarDays, Search, Users } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import Modal from '../components/Modal'
+import { useLanguage } from '../context/LanguageContext'
 
 type ManagerSection = 'analytics' | 'equipment' | 'objects' | 'engineers' | 'parts' | 'maintenance' | 'notifications'
 const REFERENCE_DATE = new Date()
 
 export default function ManagerDashboard() {
   const { equipment, orders, parts, users, adjustPartStock } = useApp()
+  const { t, language } = useLanguage()
   const [section, setSection] = useState<ManagerSection>('analytics')
   const [search, setSearch] = useState('')
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | null>(null)
@@ -48,28 +50,28 @@ export default function ManagerDashboard() {
 
     // Orders by status
     const ordersByStatus = [
-      { name: 'Новые', value: orders.filter((o) => o.status === 'new').length, color: '#1769AA' },
-      { name: 'Назначены', value: orders.filter((o) => o.status === 'assigned').length, color: '#38A9E0' },
-      { name: 'В работе', value: orders.filter((o) => o.status === 'in_progress').length, color: '#F59E0B' },
-      { name: 'В пути', value: orders.filter((o) => o.status === 'traveling').length, color: '#38A9E0' },
-      { name: 'На объекте', value: orders.filter((o) => o.status === 'arrived').length, color: '#F59E0B' },
-      { name: 'Акт ожидает клиента', value: orders.filter((o) => o.status === 'completed').length, color: '#F59E0B' },
-      { name: 'Закрыты', value: orders.filter((o) => o.status === 'closed').length, color: '#16A34A' },
+      { name: t.status.new, value: orders.filter((o) => o.status === 'new').length, color: '#1769AA' },
+      { name: t.status.assigned, value: orders.filter((o) => o.status === 'assigned').length, color: '#38A9E0' },
+      { name: t.status.inProgress, value: orders.filter((o) => o.status === 'in_progress').length, color: '#F59E0B' },
+      { name: t.status.traveling, value: orders.filter((o) => o.status === 'traveling').length, color: '#38A9E0' },
+      { name: t.status.arrived, value: orders.filter((o) => o.status === 'arrived').length, color: '#F59E0B' },
+      { name: t.status.completed, value: orders.filter((o) => o.status === 'completed').length, color: '#F59E0B' },
+      { name: t.status.closed, value: orders.filter((o) => o.status === 'closed').length, color: '#16A34A' },
     ]
 
     // Orders by priority
     const ordersByPriority = [
-      { name: 'Низкий', value: orders.filter((o) => o.priority === 'low').length },
-      { name: 'Средний', value: orders.filter((o) => o.priority === 'medium').length },
-      { name: 'Высокий', value: orders.filter((o) => o.priority === 'high').length },
-      { name: 'Критический', value: orders.filter((o) => o.priority === 'critical').length },
+      { name: t.client.low, value: orders.filter((o) => o.priority === 'low').length },
+      { name: t.client.medium, value: orders.filter((o) => o.priority === 'medium').length },
+      { name: t.client.high, value: orders.filter((o) => o.priority === 'high').length },
+      { name: t.client.critical, value: orders.filter((o) => o.priority === 'critical').length },
     ]
 
     // Equipment by status
     const equipmentByStatus = [
-      { name: 'Активно', value: equipment.filter((e) => e.status === 'active').length },
-      { name: 'ТО', value: equipment.filter((e) => e.status === 'maintenance').length },
-      { name: 'Неисправно', value: equipment.filter((e) => e.status === 'broken').length },
+      { name: t.manager.activeStatus, value: equipment.filter((e) => e.status === 'active').length },
+      { name: t.manager.maintenanceStatus, value: equipment.filter((e) => e.status === 'maintenance').length },
+      { name: t.manager.brokenStatus, value: equipment.filter((e) => e.status === 'broken').length },
     ]
 
     // Weekly data (mock)
@@ -78,7 +80,7 @@ export default function ManagerDashboard() {
       date.setDate(date.getDate() - (6 - offset))
       const key = date.toDateString()
       const dailyOrders = orders.filter((order) => new Date(order.createdAt).toDateString() === key)
-      return { name: date.toLocaleDateString('ru-RU', { weekday: 'short' }), orders: dailyOrders.length, completed: dailyOrders.filter((order) => ['completed', 'closed'].includes(order.status)).length }
+      return { name: date.toLocaleDateString(language === 'kk' ? 'kk-KZ' : language === 'en' ? 'en-US' : 'ru-RU', { weekday: 'short' }), orders: dailyOrders.length, completed: dailyOrders.filter((order) => ['completed', 'closed'].includes(order.status)).length }
     })
 
     // Low stock parts
@@ -96,7 +98,7 @@ export default function ManagerDashboard() {
       weeklyData,
       lowStockParts,
     }
-  }, [equipment, orders, parts])
+  }, [equipment, orders, parts, language, t])
 
   const query = search.trim().toLocaleLowerCase('ru-RU')
   const equipmentResults = equipment.filter((item) => !query || `${item.name} ${item.type} ${item.location}`.toLocaleLowerCase('ru-RU').includes(query))
@@ -111,21 +113,21 @@ export default function ManagerDashboard() {
   const engineers = users.filter((item) => item.role === 'engineer')
   const today = new Date(REFERENCE_DATE.getTime())
   const notifications = [
-    ...orders.filter((order) => order.status === 'new' && order.priority === 'critical').map((order) => ({ id: `order-${order.id}`, title: `Аварийная заявка ${order.orderNumber}`, detail: order.title })),
-    ...orders.filter((order) => order.status === 'completed').map((order) => ({ id: `act-${order.id}`, title: `Акт ожидает подтверждения · ${order.orderNumber}`, detail: order.title })),
-    ...parts.filter((part) => part.stock <= part.minStock).map((part) => ({ id: `part-${part.id}`, title: `Низкий остаток: ${part.name}`, detail: `${part.stock} ${part.unit} · минимум ${part.minStock}` })),
-    ...equipment.filter((item) => item.nextMaintenance && (new Date(`${item.nextMaintenance}T00:00:00`).getTime() - today.getTime()) / 86400000 <= 30 && new Date(`${item.nextMaintenance}T23:59:59`).getTime() >= today.getTime()).map((item) => ({ id: `maintenance-${item.id}`, title: `Скоро плановое ТО · ${item.name}`, detail: `${item.location} · ${new Date(`${item.nextMaintenance}T00:00:00`).toLocaleDateString('ru-RU')}` })),
-    ...orders.filter((order) => order.deadline && !['completed', 'closed', 'cancelled'].includes(order.status) && new Date(order.deadline).getTime() < today.getTime()).map((order) => ({ id: `overdue-${order.id}`, title: `Заявка просрочена · ${order.orderNumber}`, detail: order.title })),
+    ...orders.filter((order) => order.status === 'new' && order.priority === 'critical').map((order) => ({ id: `order-${order.id}`, title: `${t.ui.emergencyRequest} ${order.orderNumber}`, detail: order.title })),
+    ...orders.filter((order) => order.status === 'completed').map((order) => ({ id: `act-${order.id}`, title: `${t.ui.reportAwaiting} · ${order.orderNumber}`, detail: order.title })),
+    ...parts.filter((part) => part.stock <= part.minStock).map((part) => ({ id: `part-${part.id}`, title: `${t.ui.lowStockTitle}: ${part.name}`, detail: `${part.stock} ${part.unit} · ${t.ui.minimumLabel} ${part.minStock}` })),
+    ...equipment.filter((item) => item.nextMaintenance && (new Date(`${item.nextMaintenance}T00:00:00`).getTime() - today.getTime()) / 86400000 <= 30 && new Date(`${item.nextMaintenance}T23:59:59`).getTime() >= today.getTime()).map((item) => ({ id: `maintenance-${item.id}`, title: `${t.ui.maintenanceSoon} · ${item.name}`, detail: `${item.location} · ${new Date(`${item.nextMaintenance}T00:00:00`).toLocaleDateString(language === 'kk' ? 'kk-KZ' : language === 'en' ? 'en-US' : 'ru-RU')}` })),
+    ...orders.filter((order) => order.deadline && !['completed', 'closed', 'cancelled'].includes(order.status) && new Date(order.deadline).getTime() < today.getTime()).map((order) => ({ id: `overdue-${order.id}`, title: `${t.ui.overdueRequest} · ${order.orderNumber}`, detail: order.title })),
   ]
   const selectedEquipment = equipment.find((item) => item.id === selectedEquipmentId)
   const nav: Array<{ id: ManagerSection; label: string; icon: React.ReactNode }> = [
-    { id: 'analytics', label: 'Аналитика', icon: <TrendingUp size={17} /> },
-    { id: 'equipment', label: 'Оборудование', icon: <Boxes size={17} /> },
-    { id: 'objects', label: 'Объекты', icon: <Building2 size={17} /> },
-    { id: 'engineers', label: 'Инженеры', icon: <Users size={17} /> },
-    { id: 'parts', label: 'Запчасти', icon: <Boxes size={17} /> },
-    { id: 'maintenance', label: 'Плановое ТО', icon: <CalendarDays size={17} /> },
-    { id: 'notifications', label: `Уведомления${notifications.length ? ` · ${notifications.filter((item) => !readNotificationIds.includes(item.id)).length}` : ''}`, icon: <Bell size={17} /> },
+    { id: 'analytics', label: t.ui.analytics, icon: <TrendingUp size={17} /> },
+    { id: 'equipment', label: t.ui.equipment, icon: <Boxes size={17} /> },
+    { id: 'objects', label: t.ui.objects, icon: <Building2 size={17} /> },
+    { id: 'engineers', label: t.ui.engineerLabel, icon: <Users size={17} /> },
+    { id: 'parts', label: t.ui.parts, icon: <Boxes size={17} /> },
+    { id: 'maintenance', label: t.ui.plannedMaintenance, icon: <CalendarDays size={17} /> },
+    { id: 'notifications', label: `${t.ui.notifications}${notifications.length ? ` · ${notifications.filter((item) => !readNotificationIds.includes(item.id)).length}` : ''}`, icon: <Bell size={17} /> },
   ]
 
   return (
@@ -136,11 +138,11 @@ export default function ManagerDashboard() {
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-dark-blue">Панель руководителя</h1>
-            <p className="text-text-secondary">Аналитика и управление</p>
+            <h1 className="text-3xl font-bold text-dark-blue">{t.ui.managerTitle}</h1>
+            <p className="text-text-secondary">{t.ui.managerSubtitle}</p>
           </div>
 
-          <nav aria-label="Разделы руководителя" className="flex gap-2 overflow-x-auto pb-4 mb-6">
+          <nav aria-label={t.ui.managerSections} className="flex gap-2 overflow-x-auto pb-4 mb-6">
             {nav.map((item) => <button key={item.id} type="button" aria-pressed={section === item.id} onClick={() => { setSection(item.id); setSearch('') }} className={`min-h-11 shrink-0 inline-flex items-center gap-2 rounded-lg px-4 text-sm font-medium ${section === item.id ? 'bg-dark-blue text-white' : 'bg-white text-text-secondary border border-gray-200 hover:text-dark-blue'}`}>{item.icon}{item.label}</button>)}
           </nav>
 
@@ -150,65 +152,65 @@ export default function ManagerDashboard() {
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
               <div className="flex items-center justify-between mb-4">
                 <Activity className="w-8 h-8 text-primary-blue" />
-                <span className="text-xs text-text-secondary font-medium">в базе</span>
+                <span className="text-xs text-text-secondary font-medium">{t.ui.inDatabase}</span>
               </div>
-              <p className="text-text-secondary text-sm mb-1">Всего оборудования</p>
+              <p className="text-text-secondary text-sm mb-1">{t.ui.totalEquipment}</p>
               <p className="text-3xl font-bold text-dark-blue">{analytics.totalEquipment}</p>
             </div>
 
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
               <div className="flex items-center justify-between mb-4">
                 <Clock className="w-8 h-8 text-warning-yellow" />
-                <span className="text-xs text-text-secondary font-medium">сейчас</span>
+                <span className="text-xs text-text-secondary font-medium">{t.ui.now}</span>
               </div>
-              <p className="text-text-secondary text-sm mb-1">Активные заявки</p>
+              <p className="text-text-secondary text-sm mb-1">{t.ui.activeOrders}</p>
               <p className="text-3xl font-bold text-dark-blue">{analytics.activeOrders}</p>
             </div>
 
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
               <div className="flex items-center justify-between mb-4">
                 <CheckCircle2 className="w-8 h-8 text-success-green" />
-                <span className="text-xs text-text-secondary font-medium">по срокам</span>
+                <span className="text-xs text-text-secondary font-medium">{t.ui.onTime}</span>
               </div>
-              <p className="text-text-secondary text-sm mb-1">Выполнено в срок</p>
+              <p className="text-text-secondary text-sm mb-1">{t.ui.onTimeRate}</p>
               <p className="text-3xl font-bold text-dark-blue">{analytics.onTimeRate}%</p>
             </div>
 
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
               <div className="flex items-center justify-between mb-4">
                 <TrendingUp className="w-8 h-8 text-light-blue" />
-                <span className="text-xs text-text-secondary font-medium">по заявкам</span>
+                <span className="text-xs text-text-secondary font-medium">{t.ui.byOrders}</span>
               </div>
-              <p className="text-text-secondary text-sm mb-1">Время реакции</p>
+              <p className="text-text-secondary text-sm mb-1">{t.ui.responseTime}</p>
               <p className="text-3xl font-bold text-dark-blue">{analytics.avgResponseTime}</p>
             </div>
           </div>
           </>}
 
           {section === 'equipment' && <section className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="p-5 border-b border-gray-200"><h2 className="text-xl font-bold text-dark-blue">Цифровой реестр оборудования</h2><SearchBox value={search} onChange={setSearch} placeholder="Поиск по модели, типу или объекту" /></div>
-            <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-sm"><thead className="bg-gray-50 text-text-secondary"><tr><th className="p-4 text-left">Оборудование</th><th className="p-4 text-left">Объект</th><th className="p-4 text-left">Состояние</th><th className="p-4 text-left">Следующее ТО</th><th className="p-4 text-left">Паспорт</th></tr></thead><tbody className="divide-y divide-gray-100">{equipmentResults.map((item) => <tr key={item.id}><td className="p-4 font-medium text-dark-blue">{item.name}<span className="block text-xs font-normal text-text-secondary">{item.id} · {item.type}</span></td><td className="p-4">{item.location}</td><td className="p-4">{item.status === 'broken' ? 'Неисправно' : item.status === 'maintenance' ? 'На ТО' : 'Работает'}</td><td className="p-4">{item.nextMaintenance ?? '—'}</td><td className="p-4"><button onClick={() => setSelectedEquipmentId(item.id)} className="min-h-10 rounded-lg border border-gray-200 px-3 text-primary-blue hover:bg-bg-light-blue">QR-паспорт</button></td></tr>)}</tbody></table></div>
+            <div className="p-5 border-b border-gray-200"><h2 className="text-xl font-bold text-dark-blue">{t.ui.equipmentRegister}</h2><SearchBox value={search} onChange={setSearch} placeholder={t.ui.searchEquipment} /></div>
+            <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-sm"><thead className="bg-gray-50 text-text-secondary"><tr><th className="p-4 text-left">{t.ui.equipment}</th><th className="p-4 text-left">{t.ui.objects}</th><th className="p-4 text-left">{t.ui.equipmentState}</th><th className="p-4 text-left">{t.ui.nextService}</th><th className="p-4 text-left">{t.ui.passport}</th></tr></thead><tbody className="divide-y divide-gray-100">{equipmentResults.map((item) => <tr key={item.id}><td className="p-4 font-medium text-dark-blue">{item.name}<span className="block text-xs font-normal text-text-secondary">{item.id} · {item.type}</span></td><td className="p-4">{item.location}</td><td className="p-4">{item.status === 'broken' ? t.manager.brokenStatus : item.status === 'maintenance' ? t.manager.maintenanceStatus : t.manager.activeStatus}</td><td className="p-4">{item.nextMaintenance ?? '—'}</td><td className="p-4"><button onClick={() => setSelectedEquipmentId(item.id)} className="min-h-10 rounded-lg border border-gray-200 px-3 text-primary-blue hover:bg-bg-light-blue">{t.ui.qrPassport}</button></td></tr>)}</tbody></table></div>
           </section>}
 
-          {section === 'objects' && <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{sites.map((site) => <article key={site.name} className="rounded-xl border border-gray-200 bg-white p-5"><h2 className="font-bold text-dark-blue">{site.name}</h2><p className="mt-3 text-sm text-text-secondary">Оборудования: {site.equipment}</p><p className={`text-sm font-medium ${site.broken ? 'text-danger-red' : 'text-success-green'}`}>{site.broken ? `Неисправно: ${site.broken}` : 'Неисправностей нет'}</p></article>)}</section>}
+          {section === 'objects' && <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{sites.map((site) => <article key={site.name} className="rounded-xl border border-gray-200 bg-white p-5"><h2 className="font-bold text-dark-blue">{site.name}</h2><p className="mt-3 text-sm text-text-secondary">{t.ui.equipmentCount}: {site.equipment}</p><p className={`text-sm font-medium ${site.broken ? 'text-danger-red' : 'text-success-green'}`}>{site.broken ? `${t.manager.brokenStatus}: ${site.broken}` : t.ui.noFaults}</p></article>)}</section>}
 
-          {section === 'engineers' && <section className="bg-white rounded-xl border border-gray-200 overflow-x-auto"><table className="w-full min-w-[600px] text-sm"><thead className="bg-gray-50 text-text-secondary"><tr><th className="p-4 text-left">Инженер</th><th className="p-4 text-left">Контакт</th><th className="p-4 text-left">Активные заявки</th><th className="p-4 text-left">Всего выполнено</th></tr></thead><tbody className="divide-y divide-gray-100">{engineers.map((engineer) => <tr key={engineer.id}><td className="p-4 font-medium text-dark-blue">{engineer.name}</td><td className="p-4">{engineer.phone ?? engineer.email}</td><td className="p-4">{orders.filter((order) => order.assignedTo === engineer.id && !['completed', 'closed', 'cancelled'].includes(order.status)).length}</td><td className="p-4">{orders.filter((order) => order.assignedTo === engineer.id && ['completed', 'closed'].includes(order.status)).length}</td></tr>)}</tbody></table></section>}
+          {section === 'engineers' && <section className="bg-white rounded-xl border border-gray-200 overflow-x-auto"><table className="w-full min-w-[600px] text-sm"><thead className="bg-gray-50 text-text-secondary"><tr><th className="p-4 text-left">{t.ui.engineers.slice(0, -1)}</th><th className="p-4 text-left">{t.ui.contact}</th><th className="p-4 text-left">{t.ui.activeRequestsColumn}</th><th className="p-4 text-left">{t.ui.totalCompleted}</th></tr></thead><tbody className="divide-y divide-gray-100">{engineers.map((engineer) => <tr key={engineer.id}><td className="p-4 font-medium text-dark-blue">{engineer.name}</td><td className="p-4">{engineer.phone ?? engineer.email}</td><td className="p-4">{orders.filter((order) => order.assignedTo === engineer.id && !['completed', 'closed', 'cancelled'].includes(order.status)).length}</td><td className="p-4">{orders.filter((order) => order.assignedTo === engineer.id && ['completed', 'closed'].includes(order.status)).length}</td></tr>)}</tbody></table></section>}
 
-          {section === 'parts' && <section className="bg-white rounded-xl border border-gray-200 overflow-hidden"><div className="p-5 border-b border-gray-200"><h2 className="text-xl font-bold text-dark-blue">Склад запасных частей</h2><SearchBox value={search} onChange={setSearch} placeholder="Поиск запчастей" /></div><div className="overflow-x-auto"><table className="w-full min-w-[600px] text-sm"><thead className="bg-gray-50 text-text-secondary"><tr><th className="p-4 text-left">Наименование</th><th className="p-4 text-left">Остаток</th><th className="p-4 text-left">Минимум</th><th className="p-4 text-left">Стоимость</th><th className="p-4 text-left">Действие</th></tr></thead><tbody className="divide-y divide-gray-100">{partResults.map((part) => <tr key={part.id}><td className="p-4 font-medium text-dark-blue">{part.name}<span className="block text-xs font-normal text-text-secondary">{part.id} · {part.manufacturer}</span><span className="block text-xs font-normal text-text-secondary">{part.warehouse} · {part.compatibleEquipment?.join(', ')}</span></td><td className={`p-4 font-semibold ${part.stock <= part.minStock ? 'text-danger-red' : 'text-dark-blue'}`}>{part.stock} {part.unit}</td><td className="p-4">{part.minStock} {part.unit}</td><td className="p-4">{part.price.toLocaleString('ru-RU')} ₸</td><td className="p-4"><button onClick={() => adjustPartStock(part.id, 1)} className="min-h-10 rounded-lg bg-primary-blue px-3 text-white hover:bg-dark-blue">+1 на склад</button></td></tr>)}</tbody></table></div></section>}
+          {section === 'parts' && <section className="bg-white rounded-xl border border-gray-200 overflow-hidden"><div className="p-5 border-b border-gray-200"><h2 className="text-xl font-bold text-dark-blue">{t.ui.partsWarehouse}</h2><SearchBox value={search} onChange={setSearch} placeholder={t.ui.searchParts} /></div><div className="overflow-x-auto"><table className="w-full min-w-[600px] text-sm"><thead className="bg-gray-50 text-text-secondary"><tr><th className="p-4 text-left">{t.ui.name}</th><th className="p-4 text-left">{t.ui.stock}</th><th className="p-4 text-left">{t.ui.minimum}</th><th className="p-4 text-left">{t.ui.cost}</th><th className="p-4 text-left">{t.ui.action}</th></tr></thead><tbody className="divide-y divide-gray-100">{partResults.map((part) => <tr key={part.id}><td className="p-4 font-medium text-dark-blue">{part.name}<span className="block text-xs font-normal text-text-secondary">{part.id} · {part.manufacturer}</span><span className="block text-xs font-normal text-text-secondary">{part.warehouse} · {part.compatibleEquipment?.join(', ')}</span></td><td className={`p-4 font-semibold ${part.stock <= part.minStock ? 'text-danger-red' : 'text-dark-blue'}`}>{part.stock} {part.unit}</td><td className="p-4">{part.minStock} {part.unit}</td><td className="p-4">{part.price.toLocaleString('ru-RU')} ₸</td><td className="p-4"><button onClick={() => adjustPartStock(part.id, 1)} className="min-h-10 rounded-lg bg-primary-blue px-3 text-white hover:bg-dark-blue">{t.ui.addToStock}</button></td></tr>)}</tbody></table></div></section>}
 
-          {section === 'maintenance' && <section className="bg-white rounded-xl border border-gray-200 overflow-x-auto"><div className="p-5"><h2 className="text-xl font-bold text-dark-blue">Плановое техническое обслуживание</h2><p className="text-sm text-text-secondary mt-1">Даты показаны по цифровым паспортам оборудования.</p></div><table className="w-full min-w-[700px] text-sm"><thead className="bg-gray-50 text-text-secondary"><tr><th className="p-4 text-left">Оборудование и объект</th><th className="p-4 text-left">Последнее ТО</th><th className="p-4 text-left">Следующее ТО</th><th className="p-4 text-left">Статус</th></tr></thead><tbody className="divide-y divide-gray-100">{equipment.filter((item) => item.nextMaintenance).sort((a, b) => (a.nextMaintenance ?? '').localeCompare(b.nextMaintenance ?? '')).map((item) => <tr key={item.id}><td className="p-4 font-medium text-dark-blue">{item.name}<span className="block text-xs font-normal text-text-secondary">{item.location}</span></td><td className="p-4">{item.lastMaintenance ?? '—'}</td><td className="p-4">{item.nextMaintenance}</td><td className="p-4">{new Date(`${item.nextMaintenance}T00:00:00`).getTime() < REFERENCE_DATE.getTime() ? <span className="text-danger-red font-semibold">Просрочено</span> : 'Запланировано'}</td></tr>)}</tbody></table></section>}
+          {section === 'maintenance' && <section className="bg-white rounded-xl border border-gray-200 overflow-x-auto"><div className="p-5"><h2 className="text-xl font-bold text-dark-blue">{t.ui.plannedMaintenance}</h2><p className="text-sm text-text-secondary mt-1">{t.ui.maintenanceText}</p></div><table className="w-full min-w-[700px] text-sm"><thead className="bg-gray-50 text-text-secondary"><tr><th className="p-4 text-left">{t.ui.equipment} · {t.ui.objects}</th><th className="p-4 text-left">{t.ui.lastMaintenance}</th><th className="p-4 text-left">{t.ui.nextService}</th><th className="p-4 text-left">{t.ui.status}</th></tr></thead><tbody className="divide-y divide-gray-100">{equipment.filter((item) => item.nextMaintenance).sort((a, b) => (a.nextMaintenance ?? '').localeCompare(b.nextMaintenance ?? '')).map((item) => <tr key={item.id}><td className="p-4 font-medium text-dark-blue">{item.name}<span className="block text-xs font-normal text-text-secondary">{item.location}</span></td><td className="p-4">{item.lastMaintenance ?? '—'}</td><td className="p-4">{item.nextMaintenance}</td><td className="p-4">{new Date(`${item.nextMaintenance}T00:00:00`).getTime() < REFERENCE_DATE.getTime() ? <span className="text-danger-red font-semibold">{t.ui.overdue}</span> : t.ui.scheduled}</td></tr>)}</tbody></table></section>}
 
-          {section === 'notifications' && <section className="bg-white rounded-xl border border-gray-200"><div className="p-5 border-b border-gray-200 flex flex-wrap justify-between gap-3"><div><h2 className="text-xl font-bold text-dark-blue">Уведомления</h2><p className="text-sm text-text-secondary">События по заявкам, актам и складским остаткам.</p></div><button onClick={() => { setReadNotificationIds(notifications.map((item) => item.id)); localStorage.setItem('liftcare_read_notifications', JSON.stringify(notifications.map((item) => item.id))) }} className="min-h-10 rounded-lg border border-gray-200 px-3 text-sm hover:bg-gray-50">Прочитать все</button></div><div className="divide-y divide-gray-100">{notifications.length ? notifications.map((item) => <article key={item.id} className={`flex flex-wrap items-center justify-between gap-3 p-5 ${readNotificationIds.includes(item.id) ? '' : 'bg-primary-blue/5'}`}><div><p className="font-semibold text-dark-blue">{item.title}{!readNotificationIds.includes(item.id) && <span className="ml-2 inline-block h-2 w-2 rounded-full bg-primary-blue" aria-label="Непрочитано" />}</p><p className="text-sm text-text-secondary mt-1">{item.detail}</p></div><button onClick={() => { const next = [...new Set([...readNotificationIds, item.id])]; setReadNotificationIds(next); localStorage.setItem('liftcare_read_notifications', JSON.stringify(next)) }} className="min-h-10 rounded-lg border border-gray-200 px-3 text-sm hover:bg-gray-50">{readNotificationIds.includes(item.id) ? 'Прочитано' : 'Отметить прочитанным'}</button></article>) : <p className="p-8 text-center text-text-secondary">Новых уведомлений нет.</p>}</div></section>}
+          {section === 'notifications' && <section className="bg-white rounded-xl border border-gray-200"><div className="p-5 border-b border-gray-200 flex flex-wrap justify-between gap-3"><div><h2 className="text-xl font-bold text-dark-blue">{t.ui.notifications}</h2><p className="text-sm text-text-secondary">{t.ui.eventsText}</p></div><button onClick={() => { setReadNotificationIds(notifications.map((item) => item.id)); localStorage.setItem('liftcare_read_notifications', JSON.stringify(notifications.map((item) => item.id))) }} className="min-h-10 rounded-lg border border-gray-200 px-3 text-sm hover:bg-gray-50">{t.ui.readAll}</button></div><div className="divide-y divide-gray-100">{notifications.length ? notifications.map((item) => <article key={item.id} className={`flex flex-wrap items-center justify-between gap-3 p-5 ${readNotificationIds.includes(item.id) ? '' : 'bg-primary-blue/5'}`}><div><p className="font-semibold text-dark-blue">{item.title}{!readNotificationIds.includes(item.id) && <span className="ml-2 inline-block h-2 w-2 rounded-full bg-primary-blue" aria-label={t.ui.unread} />}</p><p className="text-sm text-text-secondary mt-1">{item.detail}</p></div><button onClick={() => { const next = [...new Set([...readNotificationIds, item.id])]; setReadNotificationIds(next); localStorage.setItem('liftcare_read_notifications', JSON.stringify(next)) }} className="min-h-10 rounded-lg border border-gray-200 px-3 text-sm hover:bg-gray-50">{readNotificationIds.includes(item.id) ? t.ui.read : t.ui.markRead}</button></article>) : <p className="p-8 text-center text-text-secondary">{t.ui.noNotifications}</p>}</div></section>}
 
-          <Modal isOpen={selectedEquipmentId !== null} onClose={() => setSelectedEquipmentId(null)} title="Цифровой паспорт оборудования">
-            {selectedEquipment && <div className="space-y-4"><div className="flex items-center gap-4 rounded-lg bg-bg-light-blue p-4"><QRCodeSVG value={selectedEquipment.qrCode} size={120} /><div><h3 className="font-bold text-dark-blue">{selectedEquipment.name}</h3><p className="text-sm text-text-secondary mt-1">{selectedEquipment.location}</p><p className="text-sm text-text-secondary">Установлено: {selectedEquipment.installationDate}</p><p className="text-sm text-text-secondary">Следующее ТО: {selectedEquipment.nextMaintenance ?? '—'}</p></div></div><h4 className="font-semibold text-dark-blue">История ремонтов</h4>{selectedEquipment.repairHistory.length ? selectedEquipment.repairHistory.map((repair, index) => <p key={`${repair.date}-${index}`} className="border-b border-gray-100 py-2 text-sm">{repair.date} · {repair.description} · {repair.cost.toLocaleString('ru-RU')} ₸</p>) : <p className="text-sm text-text-secondary">Записей пока нет.</p>}</div>}
+          <Modal isOpen={selectedEquipmentId !== null} onClose={() => setSelectedEquipmentId(null)} title={t.engineer.equipmentPassport}>
+            {selectedEquipment && <div className="space-y-4"><div className="flex items-center gap-4 rounded-lg bg-bg-light-blue p-4"><QRCodeSVG value={selectedEquipment.qrCode} size={120} /><div><h3 className="font-bold text-dark-blue">{selectedEquipment.name}</h3><p className="text-sm text-text-secondary mt-1">{selectedEquipment.location}</p><p className="text-sm text-text-secondary">{t.ui.installedAt}: {selectedEquipment.installationDate}</p><p className="text-sm text-text-secondary">{t.ui.nextService}: {selectedEquipment.nextMaintenance ?? '—'}</p></div></div><h4 className="font-semibold text-dark-blue">{t.ui.repairHistory}</h4>{selectedEquipment.repairHistory.length ? selectedEquipment.repairHistory.map((repair, index) => <p key={`${repair.date}-${index}`} className="border-b border-gray-100 py-2 text-sm">{repair.date} · {repair.description} · {repair.cost.toLocaleString('ru-RU')} ₸</p>) : <p className="text-sm text-text-secondary">{t.ui.noRecords}</p>}</div>}
           </Modal>
 
           {/* Charts Row 1 */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             {/* Orders by Status */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-              <h3 className="text-lg font-bold text-dark-blue mb-4">Заявки по статусу</h3>
+              <h3 className="text-lg font-bold text-dark-blue mb-4">{t.ui.ordersByStatus}</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -234,7 +236,7 @@ export default function ManagerDashboard() {
 
             {/* Orders by Priority */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-              <h3 className="text-lg font-bold text-dark-blue mb-4">Заявки по приоритету</h3>
+              <h3 className="text-lg font-bold text-dark-blue mb-4">{t.ui.ordersByPriority}</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={analytics.ordersByPriority}>
@@ -259,7 +261,7 @@ export default function ManagerDashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             {/* Weekly Orders */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-              <h3 className="text-lg font-bold text-dark-blue mb-4">Динамика заявок за неделю</h3>
+              <h3 className="text-lg font-bold text-dark-blue mb-4">{t.ui.weeklyDynamics}</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={analytics.weeklyData}>
@@ -283,7 +285,7 @@ export default function ManagerDashboard() {
 
             {/* Equipment Status */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-              <h3 className="text-lg font-bold text-dark-blue mb-4">Состояние оборудования</h3>
+              <h3 className="text-lg font-bold text-dark-blue mb-4">{t.ui.equipmentStatus}</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={analytics.equipmentByStatus}>
@@ -308,14 +310,14 @@ export default function ManagerDashboard() {
           {analytics.lowStockParts.length > 0 && (
             <div className="bg-white rounded-xl p-6 shadow-sm border border-danger-red/200 mb-8">
               <h3 className="text-lg font-bold text-danger-red mb-4 flex items-center gap-2">
-                ⚠️ Запчасти с низким остатком
+                ⚠️ {t.ui.lowStock}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {analytics.lowStockParts.map((part) => (
                   <div key={part.id} className="bg-danger-red/10 rounded-lg p-4 border border-danger-red/20">
                     <p className="font-semibold text-dark-blue mb-1">{part.name}</p>
                     <p className="text-sm text-danger-red font-medium">
-                      Остаток: {part.stock} {part.unit} (минимум: {part.minStock})
+                      {t.ui.stock}: {part.stock} {part.unit} ({t.ui.minimumLabel}: {part.minStock})
                     </p>
                   </div>
                 ))}
@@ -326,7 +328,7 @@ export default function ManagerDashboard() {
           {/* Recent Orders */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200">
             <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-bold text-dark-blue">Последние заявки</h3>
+              <h3 className="text-lg font-bold text-dark-blue">{t.ui.recentOrders}</h3>
             </div>
             <div className="divide-y divide-gray-200">
               {orders.slice(0, 5).map((order) => (

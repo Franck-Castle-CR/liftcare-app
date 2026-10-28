@@ -1,11 +1,12 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { translations, languageNames } from '../locales/translations'
+import { uiTranslations } from '../locales/ui'
 import type { Language } from '../locales/translations'
 
 interface LanguageContextType {
   language: Language
   setLanguage: (lang: Language) => void
-  t: typeof translations.ru
+  t: typeof translations.ru & { ui: (typeof uiTranslations)[Language] }
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
@@ -21,6 +22,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   // Save language to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, language)
+    document.documentElement.lang = language === 'kk' ? 'kk' : language
   }, [language])
 
   const setLanguage = (lang: Language) => {
@@ -30,7 +32,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const value: LanguageContextType = {
     language,
     setLanguage,
-    t: translations[language],
+    t: { ...translations[language], ui: uiTranslations[language] },
   }
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>

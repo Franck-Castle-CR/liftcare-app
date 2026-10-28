@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { useLanguage } from '../context/LanguageContext'
+import LanguageSelector from './LanguageSelector'
 import { ArrowUpDown, LogOut, LayoutDashboard, User, Home, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 
@@ -21,8 +22,8 @@ export default function Sidebar({ role }: SidebarProps) {
 
   return (
     <>
-    <button type="button" aria-label="Открыть меню" aria-expanded={open} onClick={() => setOpen(true)} className="hidden max-md:flex fixed left-4 top-4 z-40 min-h-11 min-w-11 items-center justify-center rounded-lg bg-dark-blue text-white shadow-lg"><Menu size={22} /></button>
-    {open && <button type="button" aria-label="Закрыть меню" onClick={() => setOpen(false)} className="md:hidden fixed inset-0 z-40 bg-black/40" />}
+    <button type="button" aria-label={t.ui.menuOpen} aria-expanded={open} onClick={() => setOpen(true)} className="hidden max-md:flex fixed left-4 top-4 z-40 min-h-11 min-w-11 items-center justify-center rounded-lg bg-dark-blue text-white shadow-lg"><Menu size={22} /></button>
+    {open && <button type="button" aria-label={t.ui.menuClose} onClick={() => setOpen(false)} className="md:hidden fixed inset-0 z-40 bg-black/40" />}
     <aside className={`w-64 bg-dark-blue text-white flex flex-col h-screen fixed left-0 top-0 z-50 transition-transform ${open ? 'max-md:translate-x-0' : 'max-md:-translate-x-full'}`}>
       {/* Logo */}
       <div className="p-6 border-b border-white/10">
@@ -76,6 +77,7 @@ export default function Sidebar({ role }: SidebarProps) {
 
       {/* Logout */}
       <div className="p-4 border-t border-white/10">
+        <div className="mb-3"><LanguageSelector compact /></div>
         <button
           onClick={handleLogout}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-colors text-left"
@@ -84,7 +86,7 @@ export default function Sidebar({ role }: SidebarProps) {
           <span>{t.common.logout}</span>
         </button>
       </div>
-      <button type="button" aria-label="Закрыть меню" onClick={() => setOpen(false)} className="md:hidden absolute right-3 top-3 min-h-11 min-w-11 rounded-lg hover:bg-white/10 flex items-center justify-center"><X size={20} /></button>
+      <button type="button" aria-label={t.ui.menuClose} onClick={() => setOpen(false)} className="md:hidden absolute right-3 top-3 min-h-11 min-w-11 rounded-lg hover:bg-white/10 flex items-center justify-center"><X size={20} /></button>
     </aside>
     </>
   )

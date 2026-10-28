@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import { useEffect, useRef } from 'react'
+import { useLanguage } from '../context/LanguageContext'
 
 interface ModalProps {
   isOpen: boolean
@@ -9,6 +10,7 @@ interface ModalProps {
 }
 
 export default function Modal({ isOpen, onClose, title, children }: ModalProps) {
+  const { t } = useLanguage()
   const dialogRef = useRef<HTMLDivElement>(null)
   const onCloseRef = useRef(onClose)
   useEffect(() => { onCloseRef.current = onClose }, [onClose])
@@ -42,7 +44,7 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
           <h2 id="modal-title" className="text-xl font-bold text-dark-blue">{title}</h2>
           <button
             onClick={onClose}
-            aria-label="Закрыть окно"
+            aria-label={t.common.close}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <X className="w-5 h-5 text-text-secondary" />

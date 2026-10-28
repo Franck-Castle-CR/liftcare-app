@@ -1,14 +1,16 @@
 import { CheckCircle, FileCheck, User, Wrench, FileText, BarChart3, LayoutDashboard } from 'lucide-react'
+import { useLanguage } from '../context/LanguageContext'
 
 export default function SolutionTimeline() {
+  const { t } = useLanguage()
   const steps = [
-    { icon: FileCheck, title: 'Заявка', description: 'Клиент создает заявку через портал или приложение' },
-    { icon: LayoutDashboard, title: 'Диспетчер', description: 'Заявка автоматически распределяется по инженерам' },
-    { icon: User, title: 'Инженер', description: 'Инженер получает уведомление и принимает работу' },
-    { icon: FileText, title: 'Диагностика', description: 'Проводится осмотр и фиксируется дефект' },
-    { icon: Wrench, title: 'Ремонт', description: 'Выполняются ремонтные работы и замена деталей' },
-    { icon: CheckCircle, title: 'Электронный акт', description: 'Формируется и подписывается электронный акт' },
-    { icon: BarChart3, title: 'Аналитика', description: 'Данные попадают в отчеты и аналитику' },
+    { icon: FileCheck, ...t.landing.timeline.steps.request },
+    { icon: LayoutDashboard, ...t.landing.timeline.steps.dispatcher },
+    { icon: User, ...t.landing.timeline.steps.engineer },
+    { icon: FileText, ...t.landing.timeline.steps.diagnosis },
+    { icon: Wrench, ...t.landing.timeline.steps.repair },
+    { icon: CheckCircle, ...t.landing.timeline.steps.act },
+    { icon: BarChart3, ...t.landing.timeline.steps.analytics },
   ]
 
   return (
@@ -16,10 +18,10 @@ export default function SolutionTimeline() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold text-dark-blue mb-4">
-            Как работает LiftCare
+            {t.landing.timeline.title}
           </h2>
           <p className="text-lg text-text-secondary max-w-2xl mx-auto">
-            Прозрачный процесс от заявки до аналитики в одной системе
+            {t.landing.timeline.subtitle}
           </p>
         </div>
 

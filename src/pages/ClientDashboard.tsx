@@ -6,6 +6,7 @@ import StatusBadge from '../components/StatusBadge'
 import Modal from '../components/Modal'
 import { Plus, Calendar, MapPin, Upload, CheckCircle } from 'lucide-react'
 import { compressImage } from '../utils/image'
+import LanguageSelector from '../components/LanguageSelector'
 
 export default function ClientDashboard() {
   const { user, equipment, orders, createOrder, updateOrderStatus, users, parts } = useApp()
@@ -136,7 +137,7 @@ export default function ClientDashboard() {
                       </div>
                     </div>
                     <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${eq.status === 'active' ? 'bg-success-green/10 text-success-green' : eq.status === 'broken' ? 'bg-danger-red/10 text-danger-red' : 'bg-warning-yellow/10 text-warning-yellow'}`}>
-                      {eq.status === 'active' ? 'Работает' : eq.status === 'broken' ? 'Неисправно' : 'На ТО'}
+                      {eq.status === 'active' ? t.ui.equipmentWorking : eq.status === 'broken' ? t.ui.equipmentBroken : t.ui.equipmentMaintenance}
                     </span>
                   </div>
                 </div>
@@ -189,6 +190,7 @@ export default function ClientDashboard() {
       {/* Create Order Modal */}
       <Modal isOpen={showOrderModal} onClose={() => setShowOrderModal(false)} title={t.client.createOrder}>
         <form onSubmit={handleCreateOrder} className="space-y-4">
+          <div className="flex justify-end"><LanguageSelector /></div>
           <div>
             <label className="block text-sm font-medium text-text-primary mb-2">{t.client.equipmentName}</label>
             <select
@@ -247,7 +249,7 @@ export default function ClientDashboard() {
             <label className="block text-sm font-medium text-text-primary mb-2">{t.client.uploadPhoto}</label>
             {orderForm.photo ? (
               <div className="relative">
-                <img src={orderForm.photo} alt="Preview" className="w-full h-48 object-cover rounded-lg" />
+                <img src={orderForm.photo} alt={t.client.uploadPhoto} className="w-full h-48 object-cover rounded-lg" />
                 <button
                   type="button"
                   onClick={() => setOrderForm({ ...orderForm, photo: null })}
@@ -292,23 +294,23 @@ export default function ClientDashboard() {
       <Modal isOpen={showActModal} onClose={() => setShowActModal(false)} title={t.client.workCompleted}>
         <div className="space-y-6">
           <article className="bg-white border border-gray-200 rounded-lg p-5 space-y-3 text-sm" id="electronic-act">
-            <div className="flex justify-between gap-4"><h3 className="font-bold text-dark-blue text-lg">Электронный акт выполненных работ</h3><span className="font-mono">{actOrder?.orderNumber}</span></div>
-            <p><strong>Дата:</strong> {actOrder?.completedAt ? new Date(actOrder.completedAt).toLocaleString('ru-RU') : '—'}</p>
-            <p><strong>Клиент:</strong> {user?.name}</p>
-            <p><strong>Объект и оборудование:</strong> {actEquipment?.location} · {actEquipment?.name}</p>
-            <p><strong>Неисправность:</strong> {actOrder?.title} — {actOrder?.description}</p>
-            <p><strong>Диагностика и работы:</strong> {actOrder?.diagnosis || actOrder?.notes || 'Работы выполнены'}</p>
-            <p><strong>Инженер:</strong> {actEngineer?.name ?? 'Не назначен'}</p>
-            <p><strong>Начало и окончание работ:</strong> {actOrder?.startedAt ? new Date(actOrder.startedAt).toLocaleString('ru-RU') : '—'} · {actOrder?.completedAt ? new Date(actOrder.completedAt).toLocaleString('ru-RU') : '—'}</p>
-            <p><strong>Запчасти:</strong> {actParts.length ? actParts.map(({ part, quantity }) => `${part?.name ?? 'Запчасть'} × ${quantity}`).join(', ') : 'Не использовались'}</p>
-            <p><strong>Подпись инженера:</strong> {actEngineer?.name ?? '—'}</p>
-            <p><strong>Подпись клиента:</strong> подтверждается при закрытии акта с оценкой</p>
+            <div className="flex justify-between gap-4"><h3 className="font-bold text-dark-blue text-lg">{t.ui.actTitle}</h3><span className="font-mono">{actOrder?.orderNumber}</span></div>
+            <p><strong>{t.ui.date}:</strong> {actOrder?.completedAt ? new Date(actOrder.completedAt).toLocaleString() : '—'}</p>
+            <p><strong>{t.ui.client}:</strong> {user?.name}</p>
+            <p><strong>{t.ui.siteEquipment}:</strong> {actEquipment?.location} · {actEquipment?.name}</p>
+            <p><strong>{t.ui.fault}:</strong> {actOrder?.title} — {actOrder?.description}</p>
+            <p><strong>{t.ui.diagnosisWork}:</strong> {actOrder?.diagnosis || actOrder?.notes || '—'}</p>
+            <p><strong>{t.ui.engineer}:</strong> {actEngineer?.name ?? '—'}</p>
+            <p><strong>{t.ui.workTimes}:</strong> {actOrder?.startedAt ? new Date(actOrder.startedAt).toLocaleString() : '—'} · {actOrder?.completedAt ? new Date(actOrder.completedAt).toLocaleString() : '—'}</p>
+            <p><strong>{t.ui.spareParts}:</strong> {actParts.length ? actParts.map(({ part, quantity }) => `${part?.name ?? '—'} × ${quantity}`).join(', ') : t.ui.noParts}</p>
+            <p><strong>{t.ui.engineerSignature}:</strong> {actEngineer?.name ?? '—'}</p>
+            <p><strong>{t.ui.clientSignature}:</strong> {t.ui.clientSignatureHint}</p>
             {actOrder?.photos?.[0] && <img src={actOrder.photos[0]} alt="Фото результата ремонта" className="max-h-48 rounded-lg object-cover" />}
           </article>
 
           <div className="flex flex-wrap gap-3">
-            <button type="button" onClick={() => window.print()} className="min-h-11 px-4 border border-gray-200 rounded-lg hover:bg-gray-50">Скачать PDF / печать</button>
-            <button type="button" onClick={() => { const subject = encodeURIComponent(`Акт ${actOrder?.orderNumber}`); const body = encodeURIComponent(`Акт по заявке ${actOrder?.orderNumber} готов к просмотру в LiftCare.`); window.location.href = `mailto:${user?.email}?subject=${subject}&body=${body}` }} className="min-h-11 px-4 border border-gray-200 rounded-lg hover:bg-gray-50">Отправить клиенту</button>
+            <button type="button" onClick={() => window.print()} className="min-h-11 px-4 border border-gray-200 rounded-lg hover:bg-gray-50">{t.ui.printPdf}</button>
+            <button type="button" onClick={() => { const subject = encodeURIComponent(`${t.ui.actTitle} ${actOrder?.orderNumber}`); const body = encodeURIComponent(`${t.ui.actTitle} ${actOrder?.orderNumber} · LiftCare.`); window.location.href = `mailto:${user?.email}?subject=${subject}&body=${body}` }} className="min-h-11 px-4 border border-gray-200 rounded-lg hover:bg-gray-50">{t.ui.sendClient}</button>
           </div>
 
           <div>
@@ -319,7 +321,7 @@ export default function ClientDashboard() {
                   key={star}
                   type="button"
                   onClick={() => setRating(star)}
-                  aria-label={`Оценка ${star} из 5`}
+                  aria-label={`${t.client.rateQuality}: ${star}/5`}
                   aria-pressed={star === rating}
                   className={`p-2 text-2xl transition-colors ${star <= rating ? 'text-warning-yellow' : 'text-gray-300'}`}
                 >

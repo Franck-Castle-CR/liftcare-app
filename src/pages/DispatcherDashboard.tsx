@@ -157,28 +157,28 @@ export default function DispatcherDashboard() {
                 </div>
               )}
             </div>
-            <div className="flex flex-wrap gap-2 border-b border-gray-100 px-4 py-3" role="group" aria-label="Вид заявок">
-              <button onClick={() => setViewMode('list')} aria-pressed={viewMode === 'list'} className={`min-h-10 rounded-lg px-3 text-sm ${viewMode === 'list' ? 'bg-dark-blue text-white' : 'border border-gray-200 text-text-secondary'}`}>Список</button>
-              <button onClick={() => setViewMode('kanban')} aria-pressed={viewMode === 'kanban'} className={`min-h-10 rounded-lg px-3 text-sm ${viewMode === 'kanban' ? 'bg-dark-blue text-white' : 'border border-gray-200 text-text-secondary'}`}>Канбан</button>
-              <button onClick={() => setViewMode('map')} aria-pressed={viewMode === 'map'} className={`min-h-10 rounded-lg px-3 text-sm ${viewMode === 'map' ? 'bg-dark-blue text-white' : 'border border-gray-200 text-text-secondary'}`}>Карта объектов</button>
+            <div className="flex flex-wrap gap-2 border-b border-gray-100 px-4 py-3" role="group" aria-label={t.ui.viewOrders}>
+              <button onClick={() => setViewMode('list')} aria-pressed={viewMode === 'list'} className={`min-h-10 rounded-lg px-3 text-sm ${viewMode === 'list' ? 'bg-dark-blue text-white' : 'border border-gray-200 text-text-secondary'}`}>{t.ui.list}</button>
+              <button onClick={() => setViewMode('kanban')} aria-pressed={viewMode === 'kanban'} className={`min-h-10 rounded-lg px-3 text-sm ${viewMode === 'kanban' ? 'bg-dark-blue text-white' : 'border border-gray-200 text-text-secondary'}`}>{t.ui.kanban}</button>
+              <button onClick={() => setViewMode('map')} aria-pressed={viewMode === 'map'} className={`min-h-10 rounded-lg px-3 text-sm ${viewMode === 'map' ? 'bg-dark-blue text-white' : 'border border-gray-200 text-text-secondary'}`}>{t.ui.objectMap}</button>
             </div>
             <div className="grid gap-3 border-b border-gray-100 p-4 sm:grid-cols-[1fr_220px]">
-              <label className="sr-only" htmlFor="order-search">Поиск заявок</label>
-              <input id="order-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Поиск по номеру, оборудованию или объекту" className="min-h-11 rounded-lg border border-gray-200 px-4 focus:outline-none focus:ring-2 focus:ring-primary-blue" />
-              <label className="sr-only" htmlFor="priority-filter">Фильтр по приоритету</label>
+              <label className="sr-only" htmlFor="order-search">{t.ui.searchOrders}</label>
+              <input id="order-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t.ui.searchOrdersPlaceholder} className="min-h-11 rounded-lg border border-gray-200 px-4 focus:outline-none focus:ring-2 focus:ring-primary-blue" />
+              <label className="sr-only" htmlFor="priority-filter">{t.ui.priorityFilter}</label>
               <select id="priority-filter" value={priorityFilter} onChange={(event) => setPriorityFilter(event.target.value)} className="min-h-11 rounded-lg border border-gray-200 px-3 focus:outline-none focus:ring-2 focus:ring-primary-blue">
-                <option value="all">Все приоритеты</option>
-                <option value="critical">Аварийный</option><option value="high">Высокий</option><option value="medium">Средний</option><option value="low">Низкий</option>
+                <option value="all">{t.ui.allPriorities}</option>
+                <option value="critical">{t.ui.emergency}</option><option value="high">{t.client.high}</option><option value="medium">{t.client.medium}</option><option value="low">{t.client.low}</option>
               </select>
             </div>
-            {viewMode === 'map' ? <div className="relative min-h-[380px] overflow-hidden bg-[#edf4f4] p-5" aria-label="Схема объектов обслуживания">
+            {viewMode === 'map' ? <div className="relative min-h-[380px] overflow-hidden bg-[#edf4f4] p-5" aria-label={t.ui.objectMap}>
               <div className="absolute inset-0 opacity-70" aria-hidden="true" style={{ backgroundImage: 'linear-gradient(28deg, transparent 46%, #fff 47%, #fff 50%, transparent 51%), linear-gradient(118deg, transparent 41%, #fff 42%, #fff 45%, transparent 46%), linear-gradient(90deg, rgba(22,105,170,.05) 1px, transparent 1px), linear-gradient(rgba(22,105,170,.05) 1px, transparent 1px)', backgroundSize: '100% 100%, 100% 100%, 32px 32px, 32px 32px' }} />
-              <p className="relative z-10 text-sm font-medium text-text-secondary">Демо-схема: нажмите на объект, чтобы отфильтровать заявки.</p>
-              {locationStats.map((location, index) => <button key={location.name} onClick={() => { setSearch(location.name); setViewMode('list') }} style={{ left: `${8 + (index * 31) % 78}%`, top: `${18 + (index * 43) % 68}%` }} className="absolute z-10 flex max-w-52 items-center gap-2 rounded-full border border-white bg-white px-3 py-2 text-left text-xs font-semibold text-dark-blue shadow-md hover:border-primary-blue"><MapPin size={16} className="shrink-0 text-primary-blue" /><span>{location.name}<small className="block font-normal text-text-secondary">{location.assets} ед. · {location.openOrders} активных заявок</small></span></button>)}
+              <p className="relative z-10 text-sm font-medium text-text-secondary">{t.ui.mapDemo}</p>
+              {locationStats.map((location, index) => <button key={location.name} onClick={() => { setSearch(location.name); setViewMode('list') }} style={{ left: `${8 + (index * 31) % 78}%`, top: `${18 + (index * 43) % 68}%` }} className="absolute z-10 flex max-w-52 items-center gap-2 rounded-full border border-white bg-white px-3 py-2 text-left text-xs font-semibold text-dark-blue shadow-md hover:border-primary-blue"><MapPin size={16} className="shrink-0 text-primary-blue" /><span>{location.name}<small className="block font-normal text-text-secondary">{location.assets} {t.ui.unitShort} · {location.openOrders} {t.ui.activeRequests}</small></span></button>)}
             </div> : viewMode === 'kanban' ? <div className="flex gap-4 overflow-x-auto p-4">{statusColumns.map((column) => <section key={column.id} className="w-64 shrink-0 rounded-xl bg-gray-50 p-3"><h3 className="mb-3 flex items-center justify-between font-semibold text-dark-blue">{column.title}<span className="rounded-full bg-white px-2 py-1 text-xs text-text-secondary">{visibleOrders.filter((order) => order.status === column.id).length}</span></h3><div className="space-y-3">{visibleOrders.filter((order) => order.status === column.id).map((order) => <button key={order.id} disabled={order.status !== 'new'} title={order.status === 'new' ? 'Открыть назначение инженера' : 'Карточка доступна для просмотра'} onClick={() => handleOrderClick(order.id)} className="w-full rounded-lg border border-gray-200 bg-white p-3 text-left hover:border-primary-blue disabled:cursor-default disabled:hover:border-gray-200"><span className="font-mono text-xs text-text-secondary">{order.orderNumber}</span><span className="mt-1 block text-sm font-semibold text-dark-blue">{order.title}</span><span className="mt-2 block text-xs text-text-secondary">{getPriorityLabel(order.priority)}</span></button>)}</div></section>)}</div> : <div className="divide-y divide-gray-200">
               {visibleOrders.length === 0 ? (
                 <div className="p-12 text-center text-text-secondary">
-                  {orders.length === 0 ? t.common.noData : 'По заданным условиям заявки не найдены.'}
+                  {orders.length === 0 ? t.common.noData : t.ui.noMatchingOrders}
                 </div>
               ) : (
                 visibleOrders.map((order) => {

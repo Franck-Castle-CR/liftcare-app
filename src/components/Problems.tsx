@@ -1,26 +1,24 @@
 import { Phone, FileText, Clock, EyeOff } from 'lucide-react'
+import { useLanguage } from '../context/LanguageContext'
 
 export default function Problems() {
+  const { t } = useLanguage()
   const problems = [
     {
       icon: Phone,
-      title: 'Заявки через телефон',
-      description: 'Звонки теряются, информация фиксируется вручную и может быть утеряна',
+      ...t.landing.problems.items.phone,
     },
     {
       icon: FileText,
-      title: 'История в разных документах',
-      description: 'Данные о ремонтах разбросаны по бумажным актам и Excel-таблицам',
+      ...t.landing.problems.items.docs,
     },
     {
       icon: Clock,
-      title: 'Опоздания ТО',
-      description: 'Регулярное техобслуживание пропускается из-за отсутствия уведомлений',
+      ...t.landing.problems.items.delays,
     },
     {
       icon: EyeOff,
-      title: 'Руководитель не видит состояние',
-      description: 'Нет прозрачности по реальному состоянию оборудования и нагрузке',
+      ...t.landing.problems.items.blind,
     },
   ]
 
@@ -29,10 +27,10 @@ export default function Problems() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold text-dark-blue mb-4">
-            Проблемы, с которыми сталкиваются компании
+            {t.landing.problems.title}
           </h2>
           <p className="text-lg text-text-secondary max-w-2xl mx-auto">
-            Традиционные методы управления ремонтом оборудования создают хаос и снижают эффективность
+            {t.landing.problems.subtitle}
           </p>
         </div>
 
