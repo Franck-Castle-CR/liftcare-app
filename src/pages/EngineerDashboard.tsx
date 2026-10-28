@@ -1,382 +1,207 @@
 import { useState } from 'react'
+import { CheckCircle, Clock, MapPin, QrCode, Wrench } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
 import { useApp } from '../context/AppContext'
-import { useLanguage } from '../context/LanguageContext'
 import Sidebar from '../components/Sidebar'
 import StatusBadge from '../components/StatusBadge'
 import Modal from '../components/Modal'
-import { MapPin, Clock, QrCode, CheckCircle, Upload, AlertCircle } from 'lucide-react'
+import { compressImage } from '../utils/image'
+
+const isoNow = () => new Date().toISOString()
+
+const checklistItems = [
+  'Визуальный осмотр оборудования',
+  'Проверка устройств безопасности',
+  'Проверка электрических соединений',
+  'Проверка рабочего режима',
+  'Проверка датчиков и концевиков',
+  'Проверка смазки и механических узлов',
+]
 
 export default function EngineerDashboard() {
   const { user, orders, equipment, parts, updateOrderStatus, decrementPartStock } = useApp()
-  const { t } = useLanguage()
-  const [showPassportModal, setShowPassportModal] = useState(false)
-  const [showDiagnosisModal, setShowDiagnosisModal] = useState(false)
-  const [selectedEquipment, setSelectedEquipment] = useState<string | null>(null)
-  const [selectedOrder, setSelectedOrder] = useState<string | null>(null)
-  const [checklist, setChecklist] = useState<string[]>([])
-  const [diagnosis, setDiagnosis] = useState('')
+  const [showPassport, setShowPassport] = useState(false)
+  const [showDiagnosis, setShowDiagnosis] = useState(false)
   const [selectedPart, setSelectedPart] = useState('')
   const [photo, setPhoto] = useState<string | null>(null)
+  const [photoError, setPhotoError] = useState('')
+  const myOrders = orders.filter((order) => order.assignedTo === user?.id && !['closed', 'cancelled'].includes(order.status))
+  const activeOrder = myOrders.find((order) => ['assigned', 'traveling', 'arrived', 'in_progress'].includes(order.status))
+  const activeEquipment = equipment.find((item) => item.id === activeOrder?.equipmentId)
+  const [diagnosis, setDiagnosis] = useState('')
+  const [checkedItems, setCheckedItems] = useState<string[] | null>(null)
+  const savedChecklist = activeOrder?.checklist ?? []
+  const selectedChecklist = checkedItems ?? savedChecklist
+  const selectedPartId = selectedPart || activeOrder?.partsUsed?.[0]?.partId || ''
 
-  const checklistItems = [
-    t.engineer.checklistItems.visual,
-    t.engineer.checklistItems.safety,
-    t.engineer.checklistItems.electrical,
-    t.engineer.checklistItems.functional,
-    t.engineer.checklistItems.sensors,
-    t.engineer.checklistItems.lubrication,
-  ]
-
-  const myOrders = orders.filter((o) => o.assignedTo === user?.id && o.status !== 'completed' && o.status !== 'cancelled')
-  const activeOrder = myOrders.find((o) => o.status === 'in_progress' || o.status === 'assigned')
-
-  const handleStartTrip = () => {
-    if (activeOrder) {
-      updateOrderStatus(activeOrder.id, 'in_progress')
-    }
+  const toggleChecklistItem = (item: string) => {
+    const next = selectedChecklist.includes(item)
+      ? selectedChecklist.filter((entry) => entry !== item)
+      : [...selectedChecklist, item]
+    setCheckedItems(next)
+    if (activeOrder) updateOrderStatus(activeOrder.id, activeOrder.status, { checklist: next })
   }
 
-  const handleScanQR = (equipmentId: string) => {
-    setSelectedEquipment(equipmentId)
-    setShowPassportModal(true)
-  }
-
-  const handleDiagnosis = () => {
-    setShowDiagnosisModal(true)
-  }
-
-  const handleCompleteDiagnosis = () => {
-    if (selectedOrder && checklist.length === checklistItems.length && diagnosis) {
-      updateOrderStatus(selectedOrder, 'in_progress', {
-        diagnosis,
-      })
-      setShowDiagnosisModal(false)
-    }
-  }
-
-  const handlePartSelection = (partId: string) => {
+  const choosePart = (partId: string) => {
     setSelectedPart(partId)
-    decrementPartStock(partId, 1)
+    if (activeOrder) updateOrderStatus(activeOrder.id, activeOrder.status, { partsUsed: partId ? [{ partId, quantity: 1 }] : [] })
   }
 
-  const handlePhotoUpload = () => {
-    const fakePhoto = 'https://via.placeholder.com/400x300/16A34A/ffffff?text=Фото+результата'
-    setPhoto(fakePhoto)
-  }
-
-  const handleCompleteWork = () => {
-    if (selectedOrder) {
-      updateOrderStatus(selectedOrder, 'completed', {
-        partsUsed: selectedPart ? [{ partId: selectedPart, quantity: 1 }] : [],
-        photos: photo ? [photo] : [],
-        notes: 'Работа выполнена, ожидает подтверждения клиента',
-      })
-      setSelectedOrder(null)
-      setPhoto(null)
-      setSelectedPart('')
+  const readPhoto = async (file?: File) => {
+    if (!file) return
+    setPhotoError('')
+    try {
+      const uploadedPhoto = await compressImage(file)
+      setPhoto(uploadedPhoto)
+      if (activeOrder) updateOrderStatus(activeOrder.id, activeOrder.status, { photos: [uploadedPhoto] })
+    } catch (error) {
+      setPhotoError(error instanceof Error ? error.message : 'Не удалось загрузить фотографию.')
     }
   }
 
-  const handleToggleChecklist = (item: string) => {
-    setChecklist((prev) =>
-      prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]
-    )
+  const openDiagnosis = () => {
+    setDiagnosis(activeOrder?.diagnosis ?? '')
+    setCheckedItems(activeOrder?.checklist ?? [])
+    setShowDiagnosis(true)
+  }
+
+  const saveDiagnosis = () => {
+    if (!activeOrder || !diagnosis.trim() || selectedChecklist.length !== checklistItems.length) return
+    updateOrderStatus(activeOrder.id, 'in_progress', { diagnosis: diagnosis.trim(), checklist: selectedChecklist })
+    setShowDiagnosis(false)
+  }
+
+  const finishWork = () => {
+    const resultPhoto = photo ?? activeOrder?.photos?.[0]
+    if (!activeOrder || !resultPhoto) return
+    if (selectedPartId) {
+      const part = parts.find((item) => item.id === selectedPartId)
+      if (!part || part.stock < 1) return
+      decrementPartStock(selectedPartId, 1)
+    }
+    updateOrderStatus(activeOrder.id, 'completed', {
+      partsUsed: selectedPartId ? [{ partId: selectedPartId, quantity: 1 }] : [],
+      photos: [resultPhoto],
+      notes: 'Работа выполнена. Акт сформирован и ожидает подтверждения клиента.',
+    })
+    setPhoto(null)
+    setSelectedPart('')
   }
 
   return (
     <div className="flex min-h-screen bg-bg-light-blue">
       <Sidebar role="engineer" />
-
-      <main className="flex-1 ml-64 p-8">
+      <main className="flex-1 ml-64 p-8 max-md:ml-0 max-md:p-4 max-md:pt-16">
         <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-dark-blue">Панель инженера</h1>
-            <p className="text-text-secondary">Управление ремонтными работами</p>
-          </div>
+          <header className="mb-8">
+            <p className="text-sm text-primary-blue font-semibold mb-2">МОБИЛЬНЫЙ КАБИНЕТ</p>
+            <h1 className="text-3xl font-bold text-dark-blue">Задания инженера</h1>
+            <p className="text-text-secondary mt-1">Проводите работы по этапам. Прогресс заявки сохраняется автоматически.</p>
+          </header>
 
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-              <p className="text-text-secondary text-sm mb-2">Назначено заявок</p>
-              <p className="text-3xl font-bold text-dark-blue">{myOrders.length}</p>
-            </div>
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-              <p className="text-text-secondary text-sm mb-2">В работе</p>
-              <p className="text-3xl font-bold text-warning-yellow">
-                {myOrders.filter((o) => o.status === 'in_progress').length}
-              </p>
-            </div>
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-              <p className="text-text-secondary text-sm mb-2">Выполнено сегодня</p>
-              <p className="text-3xl font-bold text-success-green">
-                {orders.filter((o) => o.assignedTo === user?.id && o.status === 'completed').length}
-              </p>
-            </div>
-          </div>
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8" aria-label="Сводка">
+            <Kpi label="Назначено заявок" value={myOrders.length} />
+            <Kpi label="В работе" value={myOrders.filter((order) => ['traveling', 'arrived', 'in_progress'].includes(order.status)).length} />
+            <Kpi label="Завершено" value={orders.filter((order) => order.assignedTo === user?.id && ['completed', 'closed'].includes(order.status)).length} />
+          </section>
 
-          {/* Active Order */}
           {activeOrder ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
+            <section className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               <div className="p-6 border-b border-gray-200">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold text-dark-blue">Активное задание</h2>
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                  <span className="font-mono text-sm text-text-secondary">{activeOrder.orderNumber}</span>
                   <StatusBadge status={activeOrder.status} />
                 </div>
-                <div className="space-y-2">
-                  <p className="font-mono text-sm text-text-secondary">{activeOrder.orderNumber}</p>
-                  <h3 className="font-semibold text-dark-blue">{activeOrder.title}</h3>
-                  <p className="text-text-secondary">{activeOrder.description}</p>
-                </div>
+                <h2 className="text-xl font-bold text-dark-blue">{activeOrder.title}</h2>
+                <p className="text-text-secondary mt-2">{activeOrder.description}</p>
+                {activeEquipment && <p className="flex items-center gap-2 text-sm text-text-secondary mt-4"><MapPin size={16} />{activeEquipment.name} · {activeEquipment.location}</p>}
               </div>
 
-              <div className="p-6">
-                {/* Step 1: Start Trip */}
-                {activeOrder.status === 'assigned' && (
-                  <button
-                    onClick={handleStartTrip}
-                    className="w-full py-4 bg-primary-blue hover:bg-dark-blue text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Clock className="w-5 h-5" />
-                    Начать поездку
-                  </button>
-                )}
+              <div className="p-6 space-y-5">
+                <ol className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs" aria-label="Этапы работ">
+                  {['Поездка', 'Прибытие', 'QR-паспорт', 'Диагностика', 'Акт'].map((step, index) => {
+                    const reached = [
+                      ['traveling', 'arrived', 'in_progress', 'completed', 'closed'],
+                      ['arrived', 'in_progress', 'completed', 'closed'],
+                      ['in_progress', 'completed', 'closed'],
+                      ['in_progress', 'completed', 'closed'],
+                      ['completed', 'closed'],
+                    ][index].includes(activeOrder.status)
+                    return <li key={step} className={`rounded-lg p-3 text-center ${reached ? 'bg-primary-blue/10 text-primary-blue font-semibold' : 'bg-gray-50 text-text-secondary'}`}>{step}</li>
+                  })}
+                </ol>
 
-                {/* Step 2: Arrived & QR Scan */}
-                {activeOrder.status === 'in_progress' && !activeOrder.diagnosis && (
-                  <div className="space-y-4">
-                    <button
-                      onClick={() => setSelectedOrder(activeOrder.id)}
-                      className="w-full py-4 bg-success-green hover:bg-green-600 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-                    >
-                      <CheckCircle className="w-5 h-5" />
-                      Прибыл на объект
-                    </button>
-                    <button
-                      onClick={() => handleScanQR(activeOrder.equipmentId)}
-                      className="w-full py-4 bg-light-blue hover:bg-primary-blue text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-                    >
-                      <QrCode className="w-5 h-5" />
-                      Сканировать QR-код оборудования
-                    </button>
+                {activeOrder.status === 'assigned' && <ActionButton onClick={() => updateOrderStatus(activeOrder.id, 'traveling', { tripStartedAt: isoNow() })} icon={<Clock size={19} />}>Начать поездку</ActionButton>}
+                {activeOrder.status === 'traveling' && <ActionButton onClick={() => updateOrderStatus(activeOrder.id, 'arrived', { arrivedAt: isoNow() })} icon={<MapPin size={19} />}>Отметить прибытие на объект</ActionButton>}
+                {activeOrder.status === 'arrived' && (
+                  <div className="space-y-3">
+                    <button onClick={() => { updateOrderStatus(activeOrder.id, 'arrived', { qrScannedAt: isoNow() }); setShowPassport(true) }} className="w-full min-h-12 py-3 bg-light-blue hover:bg-primary-blue text-white font-medium rounded-lg flex items-center justify-center gap-2"><QrCode size={19} />Сканировать QR-код оборудования</button>
+                    {activeOrder.qrScannedAt && <ActionButton onClick={openDiagnosis} icon={<Wrench size={19} />}>Начать диагностику</ActionButton>}
                   </div>
                 )}
+                {activeOrder.status === 'in_progress' && !activeOrder.diagnosis && <ActionButton onClick={openDiagnosis} icon={<Wrench size={19} />}>Продолжить диагностику</ActionButton>}
 
-                {/* Step 3: Diagnosis */}
-                {activeOrder.status === 'in_progress' && activeOrder.diagnosis && !activeOrder.partsUsed && (
-                  <button
-                    onClick={handleDiagnosis}
-                    className="w-full py-4 bg-warning-yellow hover:bg-yellow-600 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-                  >
-                    <AlertCircle className="w-5 h-5" />
-                    Начать диагностику
-                  </button>
-                )}
-
-                {/* Step 4: Parts */}
-                {activeOrder.status === 'in_progress' && activeOrder.diagnosis && !activeOrder.photos && (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-text-primary mb-2">Выберите использованную запчасть</label>
-                      <select
-                        value={selectedPart}
-                        onChange={(e) => handlePartSelection(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-blue"
-                      >
-                        <option value="">Не требуется</option>
-                        {parts.map((part) => (
-                          <option key={part.id} value={part.id} disabled={part.stock === 0}>
-                            {part.name} (Остаток: {part.stock} {part.unit})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    {selectedPart && (
-                      <p className="text-sm text-success-green flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4" />
-                        Запчасть списана со склада
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Step 5: Complete */}
                 {activeOrder.status === 'in_progress' && activeOrder.diagnosis && (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-text-primary mb-2">Фото результата</label>
-                      {photo ? (
-                        <div className="relative">
-                          <img src={photo} alt="Result" className="w-full h-48 object-cover rounded-lg" />
-                          <button
-                            onClick={() => setPhoto(null)}
-                            className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-md hover:bg-gray-100"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={handlePhotoUpload}
-                          className="w-full px-4 py-8 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-blue transition-colors flex flex-col items-center gap-2"
-                        >
-                          <Upload className="w-8 h-8 text-text-secondary" />
-                          <span className="text-sm text-text-secondary">Загрузить фото</span>
-                        </button>
-                      )}
+                  <div className="space-y-5 border-t border-gray-100 pt-5">
+                    <div className="rounded-lg bg-bg-light-blue p-4">
+                      <h3 className="font-semibold text-dark-blue mb-1">Результат диагностики</h3>
+                      <p className="text-sm text-text-secondary">{activeOrder.diagnosis}</p>
+                      <button onClick={openDiagnosis} className="text-sm text-primary-blue font-medium mt-2 underline">Изменить чек-лист и диагноз</button>
                     </div>
-                    <button
-                      onClick={handleCompleteWork}
-                      disabled={!photo}
-                      className="w-full py-4 bg-success-green hover:bg-green-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      <CheckCircle className="w-5 h-5" />
-                      Завершить работу
-                    </button>
+                    <div>
+                      <label htmlFor="part-select" className="block text-sm font-medium text-text-primary mb-2">Использованная запчасть</label>
+                      <select id="part-select" value={selectedPartId} onChange={(event) => choosePart(event.target.value)} className="w-full min-h-12 px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-blue">
+                        <option value="">Не использовалась</option>
+                        {parts.map((part) => <option key={part.id} value={part.id} disabled={part.stock < 1}>{part.name} · остаток {part.stock} {part.unit}</option>)}
+                      </select>
+                      <p className="text-xs text-text-secondary mt-1">Склад спишется один раз при завершении работы.</p>
+                    </div>
+                    <div>
+                      <label htmlFor="result-photo" className="block text-sm font-medium text-text-primary mb-2">Фото результата</label>
+                      <input id="result-photo" type="file" accept="image/*" capture="environment" onChange={(event) => readPhoto(event.target.files?.[0])} className="block w-full text-sm text-text-secondary file:mr-3 file:rounded-lg file:border-0 file:bg-primary-blue file:px-4 file:py-3 file:text-white" />
+                      {photoError && <p role="alert" className="mt-2 text-sm text-danger-red">{photoError}</p>}
+                      {(photo ?? activeOrder.photos?.[0]) && <img src={photo ?? activeOrder.photos?.[0]} alt="Фото выполненной работы" className="mt-3 max-h-56 rounded-lg object-cover" />}
+                    </div>
+                    <ActionButton onClick={finishWork} disabled={!photo && !activeOrder.photos?.[0]} icon={<CheckCircle size={19} />}>Завершить работу и сформировать акт</ActionButton>
                   </div>
                 )}
               </div>
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-              <p className="text-text-secondary">Нет активных заданий</p>
-            </div>
-          )}
+            </section>
+          ) : <div className="bg-white rounded-xl p-12 text-center border border-gray-200 text-text-secondary">Нет активных заданий. Новые назначения появятся здесь.</div>}
 
-          {/* Other Orders */}
-          {myOrders.length > 1 && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-xl font-bold text-dark-blue">Другие заявки</h2>
-              </div>
-              <div className="divide-y divide-gray-200">
-                {myOrders
-                  .filter((o) => o.id !== activeOrder?.id)
-                  .map((order) => (
-                    <div key={order.id} className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-mono text-sm text-text-secondary mb-1">{order.orderNumber}</p>
-                          <h3 className="font-semibold text-dark-blue">{order.title}</h3>
-                        </div>
-                        <StatusBadge status={order.status} />
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          )}
+          {myOrders.some((order) => order.status === 'completed') && <section className="mt-8 bg-white rounded-xl border border-gray-200 p-6"><h2 className="font-bold text-dark-blue mb-3">Акты ожидают подтверждения</h2><div className="space-y-3">{myOrders.filter((order) => order.status === 'completed').map((order) => <div key={order.id} className="flex items-center justify-between gap-3"><span>{order.orderNumber} · {order.title}</span><StatusBadge status={order.status} /></div>)}</div></section>}
+
+          <div className="mt-8 bg-white rounded-xl border border-gray-200 p-6"><h2 className="font-bold text-dark-blue mb-3">Другие назначения</h2>{myOrders.filter((order) => order.id !== activeOrder?.id).map((order) => <div key={order.id} className="flex items-center justify-between gap-4 py-3 border-t border-gray-100"><span>{order.orderNumber} · {order.title}</span><StatusBadge status={order.status} /></div>)}</div>
         </div>
       </main>
 
-      {/* Equipment Passport Modal */}
-      <Modal
-        isOpen={showPassportModal}
-        onClose={() => setShowPassportModal(false)}
-        title="Цифровой паспорт оборудования"
-      >
-        {selectedEquipment && (() => {
-          const eq = equipment.find((e) => e.id === selectedEquipment)
-          return (
-            <div className="space-y-6">
-              <div className="bg-bg-light-blue rounded-lg p-6">
-                <h3 className="font-bold text-dark-blue text-xl mb-2">{eq?.name}</h3>
-                <div className="space-y-2 text-sm">
-                  <p className="flex items-center gap-2">
-                    <span className="text-text-secondary">Тип:</span>
-                    <span className="font-medium text-dark-blue">{eq?.type}</span>
-                  </p>
-                  <p className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-text-secondary" />
-                    <span className="font-medium text-dark-blue">{eq?.location}</span>
-                  </p>
-                  <p className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-text-secondary" />
-                    <span className="font-medium text-dark-blue">Установлен: {eq?.installationDate}</span>
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="font-semibold text-dark-blue mb-3">История ремонтов</h4>
-                {eq?.repairHistory && eq.repairHistory.length > 0 ? (
-                  <div className="space-y-3">
-                    {eq.repairHistory.map((repair, index) => (
-                      <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
-                        <p className="text-sm text-text-secondary mb-1">{repair.date}</p>
-                        <p className="font-medium text-dark-blue mb-1">{repair.description}</p>
-                        <p className="text-sm text-text-secondary">Стоимость: {repair.cost.toLocaleString()} ₸</p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-text-secondary text-sm">История ремонтов пуста</p>
-                )}
-              </div>
-
-              <button
-                onClick={() => setShowPassportModal(false)}
-                className="w-full py-3 bg-primary-blue hover:bg-dark-blue text-white font-medium rounded-lg transition-colors"
-              >
-                Закрыть
-              </button>
-            </div>
-          )
-        })()}
+      <Modal isOpen={showPassport} onClose={() => setShowPassport(false)} title="Цифровой паспорт оборудования">
+        {activeEquipment ? <div className="space-y-5">
+          <div className="flex flex-col sm:flex-row gap-5 items-center bg-bg-light-blue rounded-lg p-5">
+            <QRCodeSVG value={activeEquipment.qrCode} size={128} title={`QR-код ${activeEquipment.name}`} />
+            <div><h3 className="text-lg font-bold text-dark-blue">{activeEquipment.name}</h3><p className="text-sm text-text-secondary mt-1">{activeEquipment.location}</p><p className="text-sm text-text-secondary mt-2">Установлено: {activeEquipment.installationDate}</p><p className="text-sm text-text-secondary">Следующее ТО: {activeEquipment.nextMaintenance ?? 'Не запланировано'}</p></div>
+          </div>
+          <div><h4 className="font-semibold text-dark-blue mb-2">История обслуживания</h4>{activeEquipment.repairHistory.length ? activeEquipment.repairHistory.map((item, index) => <p key={`${item.date}-${index}`} className="py-2 border-b border-gray-100 text-sm">{item.date} · {item.description} · {item.cost.toLocaleString('ru-RU')} ₸</p>) : <p className="text-sm text-text-secondary">История ремонта пока пуста.</p>}</div>
+          <button onClick={() => setShowPassport(false)} className="w-full min-h-12 rounded-lg bg-primary-blue hover:bg-dark-blue text-white font-medium">Закрыть паспорт</button>
+        </div> : <p>Оборудование не найдено.</p>}
       </Modal>
 
-      {/* Diagnosis Modal */}
-      <Modal
-        isOpen={showDiagnosisModal}
-        onClose={() => setShowDiagnosisModal(false)}
-        title="Диагностика оборудования"
-      >
-        <div className="space-y-6">
-          <div>
-            <h4 className="font-semibold text-dark-blue mb-3">Чек-лист диагностики</h4>
-            <div className="space-y-2">
-              {checklistItems.map((item) => (
-                <label key={item} className="flex items-center gap-3 p-3 bg-bg-light-blue rounded-lg cursor-pointer hover:bg-white transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={checklist.includes(item)}
-                    onChange={() => handleToggleChecklist(item)}
-                    className="w-5 h-5 text-primary-blue rounded"
-                  />
-                  <span className="text-sm text-dark-blue">{item}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">Причина неисправности</label>
-            <textarea
-              value={diagnosis}
-              onChange={(e) => setDiagnosis(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-blue min-h-[100px]"
-              placeholder="Опишите выявленную проблему..."
-              required
-            />
-          </div>
-
-          <div className="flex gap-3 pt-4">
-            <button
-              onClick={() => setShowDiagnosisModal(false)}
-              className="flex-1 px-4 py-3 border border-gray-200 text-text-primary font-medium rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Отмена
-            </button>
-            <button
-              onClick={handleCompleteDiagnosis}
-              disabled={checklist.length !== checklistItems.length || !diagnosis}
-              className="flex-1 px-4 py-3 bg-primary-blue hover:bg-dark-blue text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Завершить диагностику
-            </button>
-          </div>
+      <Modal isOpen={showDiagnosis} onClose={() => setShowDiagnosis(false)} title="Диагностика оборудования">
+        <div className="space-y-5">
+          <div><h3 className="font-semibold text-dark-blue mb-3">Чек-лист</h3><div className="space-y-2">{checklistItems.map((item) => <label key={item} className="min-h-12 flex items-center gap-3 rounded-lg bg-bg-light-blue px-3 py-2"><input type="checkbox" checked={selectedChecklist.includes(item)} onChange={() => toggleChecklistItem(item)} className="w-5 h-5 accent-primary-blue" /><span className="text-sm text-dark-blue">{item}</span></label>)}</div></div>
+          <div><label htmlFor="diagnosis-text" className="block text-sm font-medium text-text-primary mb-2">Причина неисправности</label><textarea id="diagnosis-text" value={diagnosis} onChange={(event) => setDiagnosis(event.target.value)} className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-blue min-h-28" placeholder="Опишите выявленную причину" /></div>
+          <p className="text-sm text-text-secondary">Отмечено {selectedChecklist.length} из {checklistItems.length} пунктов.</p>
+          <button onClick={saveDiagnosis} disabled={selectedChecklist.length !== checklistItems.length || !diagnosis.trim()} className="w-full min-h-12 rounded-lg bg-primary-blue hover:bg-dark-blue disabled:opacity-50 text-white font-medium">Сохранить диагностику</button>
         </div>
       </Modal>
     </div>
   )
+}
+
+function Kpi({ label, value }: { label: string; value: number }) {
+  return <div className="bg-white rounded-xl p-5 border border-gray-200"><p className="text-sm text-text-secondary">{label}</p><p className="text-3xl font-bold text-dark-blue mt-2">{value}</p></div>
+}
+
+function ActionButton({ onClick, icon, children, disabled = false }: { onClick: () => void; icon: React.ReactNode; children: React.ReactNode; disabled?: boolean }) {
+  return <button onClick={onClick} disabled={disabled} className="w-full min-h-12 py-3 bg-primary-blue hover:bg-dark-blue disabled:opacity-50 text-white font-medium rounded-lg flex items-center justify-center gap-2"><span aria-hidden="true">{icon}</span>{children}</button>
 }

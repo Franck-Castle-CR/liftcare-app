@@ -1,7 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { useLanguage } from '../context/LanguageContext'
-import { ArrowUpDown, LogOut, LayoutDashboard, User, Home } from 'lucide-react'
+import { ArrowUpDown, LogOut, LayoutDashboard, User, Home, Menu, X } from 'lucide-react'
+import { useState } from 'react'
 
 interface SidebarProps {
   role: 'client' | 'dispatcher' | 'engineer' | 'manager'
@@ -11,6 +12,7 @@ export default function Sidebar({ role }: SidebarProps) {
   const navigate = useNavigate()
   const { user, logout } = useApp()
   const { t } = useLanguage()
+  const [open, setOpen] = useState(false)
 
   const handleLogout = () => {
     logout()
@@ -18,7 +20,10 @@ export default function Sidebar({ role }: SidebarProps) {
   }
 
   return (
-    <aside className="w-64 bg-dark-blue text-white flex flex-col h-screen fixed left-0 top-0">
+    <>
+    <button type="button" aria-label="Открыть меню" aria-expanded={open} onClick={() => setOpen(true)} className="hidden max-md:flex fixed left-4 top-4 z-40 min-h-11 min-w-11 items-center justify-center rounded-lg bg-dark-blue text-white shadow-lg"><Menu size={22} /></button>
+    {open && <button type="button" aria-label="Закрыть меню" onClick={() => setOpen(false)} className="md:hidden fixed inset-0 z-40 bg-black/40" />}
+    <aside className={`w-64 bg-dark-blue text-white flex flex-col h-screen fixed left-0 top-0 z-50 transition-transform ${open ? 'max-md:translate-x-0' : 'max-md:-translate-x-full'}`}>
       {/* Logo */}
       <div className="p-6 border-b border-white/10">
         <div className="flex items-center gap-2">
@@ -50,7 +55,7 @@ export default function Sidebar({ role }: SidebarProps) {
         <ul className="space-y-2">
           <li>
             <button
-              onClick={() => navigate('/')}
+              onClick={() => { setOpen(false); navigate('/') }}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-colors text-left"
             >
               <Home className="w-5 h-5" />
@@ -59,7 +64,7 @@ export default function Sidebar({ role }: SidebarProps) {
           </li>
           <li>
             <button
-              onClick={() => navigate(`/${role}`)}
+              onClick={() => { setOpen(false); navigate(`/${role}`) }}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-primary-blue text-left"
             >
               <LayoutDashboard className="w-5 h-5" />
@@ -79,6 +84,8 @@ export default function Sidebar({ role }: SidebarProps) {
           <span>{t.common.logout}</span>
         </button>
       </div>
+      <button type="button" aria-label="Закрыть меню" onClick={() => setOpen(false)} className="md:hidden absolute right-3 top-3 min-h-11 min-w-11 rounded-lg hover:bg-white/10 flex items-center justify-center"><X size={20} /></button>
     </aside>
+    </>
   )
 }

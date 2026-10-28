@@ -18,6 +18,7 @@ interface AppContextType {
   createOrder: (orderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt'>) => Order
   updateOrderStatus: (orderId: string, newStatus: OrderStatus, additionalData?: Partial<Order>) => void
   decrementPartStock: (partId: string, quantity: number) => void
+  adjustPartStock: (partId: string, change: number) => void
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
@@ -57,6 +58,24 @@ const initialUsers: User[] = [
     phone: '+7 777 456 7890',
   },
 ]
+
+initialUsers[0] = { ...initialUsers[0], name: 'Алия Садыкова' }
+initialUsers[1] = { ...initialUsers[1], name: 'Данияр Сапаров' }
+initialUsers[2] = { ...initialUsers[2], name: 'Арман Бекенов' }
+initialUsers[3] = { ...initialUsers[3], name: 'Алия Жумабекова' }
+initialUsers.push(
+  { id: '5', email: 'engineer2@liftcare.kz', password: 'demo123', name: 'Нурлан Тлеубаев', role: 'engineer', phone: '+7 777 555 1005' },
+  { id: '6', email: 'engineer3@liftcare.kz', password: 'demo123', name: 'Айбек Оразов', role: 'engineer', phone: '+7 777 555 1006' },
+  { id: '7', email: 'engineer4@liftcare.kz', password: 'demo123', name: 'Марат Касымов', role: 'engineer', phone: '+7 777 555 1007' },
+  { id: '8', email: 'engineer5@liftcare.kz', password: 'demo123', name: 'Ерлан Нуртаев', role: 'engineer', phone: '+7 777 555 1008' },
+  { id: '9', email: 'client2@liftcare.kz', password: 'demo123', name: 'ТОО «Астана Сервис»', role: 'client' },
+  { id: '10', email: 'client3@liftcare.kz', password: 'demo123', name: 'БЦ «Орбита»', role: 'client' },
+  { id: '11', email: 'client4@liftcare.kz', password: 'demo123', name: 'Завод «Металлург»', role: 'client' },
+  { id: '12', email: 'client5@liftcare.kz', password: 'demo123', name: 'Логистик Центр', role: 'client' },
+  { id: '13', email: 'engineer6@liftcare.kz', password: 'demo123', name: 'Тимур Абдрахманов', role: 'engineer', phone: '+7 777 555 1013' },
+  { id: '14', email: 'engineer7@liftcare.kz', password: 'demo123', name: 'Руслан Ибраев', role: 'engineer', phone: '+7 777 555 1014' },
+  { id: '15', email: 'engineer8@liftcare.kz', password: 'demo123', name: 'Серик Жанатов', role: 'engineer', phone: '+7 777 555 1015' },
+)
 
 const initialEquipment: Equipment[] = [
   {
@@ -161,6 +180,29 @@ const initialEquipment: Equipment[] = [
   },
 ]
 
+initialEquipment.forEach((item, index) => {
+  item.lastMaintenance = '2026-08-15'
+  item.nextMaintenance = index % 2 === 0 ? '2026-11-15' : '2026-12-15'
+})
+
+for (let index = initialEquipment.length + 1; index <= 25; index += 1) {
+  const types = ['Лифт пассажирский', 'Эскалатор', 'Башенный кран', 'Промышленный чиллер', 'Конвейерная линия']
+  const sites = ['БЦ «Орбита»', 'ТЦ «Астана»', 'Завод «Металлург»', 'Логистик Центр', 'Клиника «Сункар»', 'ЖК «Солнечный»', 'Стройплощадка «Мегаполис»']
+  const equipmentType = types[(index - 1) % types.length]
+  initialEquipment.push({
+    id: `EQ-${String(index).padStart(3, '0')}`,
+    name: `${equipmentType} ${['Otis', 'KONE', 'Schindler', 'Siemens', 'Daikin'][(index - 1) % 5]}-${100 + index}`,
+    type: equipmentType.toLowerCase(),
+    status: index % 9 === 0 ? 'broken' : index % 6 === 0 ? 'maintenance' : 'active',
+    location: sites[(index - 1) % sites.length],
+    qrCode: `https://liftcare.kz/equipment/EQ-${String(index).padStart(3, '0')}`,
+    installationDate: `202${index % 5}-0${(index % 8) + 1}-15`,
+    lastMaintenance: '2026-09-15',
+    nextMaintenance: '2026-11-15',
+    repairHistory: [],
+  })
+}
+
 const initialParts: Part[] = [
   {
     id: 'P-001',
@@ -211,6 +253,29 @@ const initialParts: Part[] = [
     price: 500,
   },
 ]
+
+for (let index = initialParts.length + 1; index <= 20; index += 1) {
+  const partNames = ['Ролик двери кабины', 'Контактор силовой 24V', 'Концевой выключатель', 'Подшипник тягового шкива', 'Плата управления лифтом', 'Реле контроля фаз', 'Тормозная колодка', 'Кнопка вызова', 'Датчик перегрузки', 'Плавкий предохранитель', 'Трос стальной 10 мм', 'Масло редуктора', 'Цепь эскалатора', 'Датчик уровня пола']
+  const name = partNames[index - initialParts.length - 1]
+  const unit = ['Трос стальной 10 мм'].includes(name) ? 'м' : name === 'Масло редуктора' ? 'л' : 'шт'
+  initialParts.push({
+    id: `P-${String(index).padStart(3, '0')}`,
+    name,
+    manufacturer: ['Otis', 'KONE', 'Schindler', 'Siemens', 'Daikin'][index % 5],
+    warehouse: 'Основной склад · Астана',
+    compatibleEquipment: ['elevator', 'escalator'],
+    stock: index % 4 === 0 ? 3 : 8 + index,
+    unit,
+    minStock: 5,
+    price: 4500 + index * 1750,
+  })
+}
+
+initialParts.forEach((part, index) => {
+  part.manufacturer ??= ['Otis', 'KONE', 'Schindler', 'Siemens', 'Daikin'][index % 5]
+  part.warehouse ??= 'Основной склад · Астана'
+  part.compatibleEquipment ??= ['elevator']
+})
 
 const initialOrders: Order[] = [
   {
@@ -269,13 +334,57 @@ const initialOrders: Order[] = [
   },
 ]
 
+initialOrders[0] = {
+  ...initialOrders[0],
+  title: 'Пассажирский лифт не открывает двери',
+  description: 'Двери кабины не открываются на первом этаже. Нужна срочная диагностика.',
+  status: 'new',
+  priority: 'critical',
+  createdAt: '2026-10-27T08:30:00.000Z',
+  assignedTo: undefined,
+  assignedAt: undefined,
+  completedAt: undefined,
+  diagnosis: undefined,
+  partsUsed: undefined,
+  photos: [],
+}
+initialOrders[1] = { ...initialOrders[1], title: 'Посторонний шум при движении', description: 'Во время движения лифта слышен посторонний шум в шахте. Нужен осмотр тягового узла.', status: 'assigned', priority: 'high', createdAt: '2026-10-27T10:00:00.000Z', assignedTo: '3', assignedAt: new Date().toISOString(), startedAt: undefined, completedAt: undefined, diagnosis: undefined, partsUsed: [], photos: [] }
+initialOrders[2] = { ...initialOrders[2], title: 'Плановая замена троса', description: 'Плановая замена изношенного тягового троса пассажирского лифта.', status: 'new', priority: 'medium', createdAt: '2026-10-28T06:30:00.000Z', assignedTo: undefined, assignedAt: undefined, startedAt: undefined, completedAt: undefined, diagnosis: undefined, partsUsed: [], photos: [] }
+initialOrders.push(
+  {
+    id: 'ORD-004', orderNumber: 'LC-2026-0004', title: 'Башенный кран не реагирует на пульт', description: 'Не работает дистанционное управление краном.', equipmentId: 'EQ-003', status: 'new', priority: 'critical', createdBy: '1', createdAt: '2026-10-28T07:15:00.000Z', photos: [],
+  },
+  {
+    id: 'ORD-005', orderNumber: 'LC-2026-0005', title: 'Проверка датчика безопасности', description: 'Плановая проверка концевого выключателя.', equipmentId: 'EQ-004', status: 'assigned', priority: 'high', createdBy: '1', createdAt: '2026-10-28T07:45:00.000Z', assignedTo: '3', assignedAt: new Date().toISOString(), photos: [],
+  },
+)
+for (let index = initialOrders.length + 1; index <= 30; index += 1) {
+  const equipmentNumber = ((index - 1) % initialEquipment.length) + 1
+  const clientId = ['1', '9', '10', '11', '12'][(index - 1) % 5]
+  const engineerIds = ['3', '5', '6', '7', '8', '13', '14', '15']
+  const engineerId = engineerIds[(index - 1) % engineerIds.length]
+  const isCompleted = index % 3 === 0
+  initialOrders.push({
+    id: `ORD-${String(index).padStart(3, '0')}`,
+    orderNumber: `LC-2026-${String(index).padStart(4, '0')}`,
+    title: ['Проверка системы безопасности', 'Плановое техническое обслуживание', 'Устранение вибрации оборудования', 'Замена изношенного датчика'][index % 4],
+    description: 'Демонстрационная заявка для проверки работы системы LiftCare.',
+    equipmentId: `EQ-${String(equipmentNumber).padStart(3, '0')}`,
+    status: isCompleted ? 'completed' : index % 2 === 0 ? 'assigned' : 'new',
+    priority: (['low', 'medium', 'high', 'critical'] as const)[index % 4],
+    createdBy: clientId,
+    createdAt: `2026-10-${String(1 + (index % 27)).padStart(2, '0')}T09:00:00.000Z`,
+    ...(isCompleted ? { assignedTo: engineerId, deadline: '2026-10-11T12:30:00.000Z', assignedAt: '2026-10-10T10:00:00.000Z', startedAt: '2026-10-10T11:00:00.000Z', completedAt: '2026-10-10T12:30:00.000Z', diagnosis: 'Проведена проверка узлов, выявлен естественный износ.', partsUsed: [], photos: [] } : index % 2 === 0 ? { assignedTo: engineerId, deadline: '2026-10-30T15:00:00.000Z', assignedAt: '2026-10-25T10:00:00.000Z' } : { photos: [] }),
+  })
+}
+
 // Storage keys
 const STORAGE_KEYS = {
-  USER: 'liftcare_user',
-  USERS: 'liftcare_users',
-  EQUIPMENT: 'liftcare_equipment',
-  PARTS: 'liftcare_parts',
-  ORDERS: 'liftcare_orders',
+  USER: 'liftcare_user_v3',
+  USERS: 'liftcare_users_v3',
+  EQUIPMENT: 'liftcare_equipment_v3',
+  PARTS: 'liftcare_parts_v3',
+  ORDERS: 'liftcare_orders_v3',
 }
 
 // Helper functions
@@ -299,22 +408,11 @@ const saveToStorage = <T,>(key: string, value: T): void => {
 
 // Provider component
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [users, setUsers] = useState<User[]>(initialUsers)
-  const [equipment, setEquipment] = useState<Equipment[]>(initialEquipment)
-  const [parts, setParts] = useState<Part[]>(initialParts)
-  const [orders, setOrders] = useState<Order[]>(initialOrders)
-
-  // Load data from localStorage on mount
-  useEffect(() => {
-    const savedUser = loadFromStorage<User | null>(STORAGE_KEYS.USER, null)
-    setUser(savedUser)
-
-    setUsers(loadFromStorage<User[]>(STORAGE_KEYS.USERS, initialUsers))
-    setEquipment(loadFromStorage<Equipment[]>(STORAGE_KEYS.EQUIPMENT, initialEquipment))
-    setParts(loadFromStorage<Part[]>(STORAGE_KEYS.PARTS, initialParts))
-    setOrders(loadFromStorage<Order[]>(STORAGE_KEYS.ORDERS, initialOrders))
-  }, [])
+  const [user, setUser] = useState<User | null>(() => loadFromStorage<User | null>(STORAGE_KEYS.USER, null))
+  const [users] = useState<User[]>(() => loadFromStorage<User[]>(STORAGE_KEYS.USERS, initialUsers))
+  const [equipment] = useState<Equipment[]>(() => loadFromStorage<Equipment[]>(STORAGE_KEYS.EQUIPMENT, initialEquipment))
+  const [parts, setParts] = useState<Part[]>(() => loadFromStorage<Part[]>(STORAGE_KEYS.PARTS, initialParts))
+  const [orders, setOrders] = useState<Order[]>(() => loadFromStorage<Order[]>(STORAGE_KEYS.ORDERS, initialOrders))
 
   // Save to localStorage whenever data changes
   useEffect(() => {
@@ -356,10 +454,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   const createOrder = (orderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt'>): Order => {
+    const highestNumber = orders.reduce((highest, order) => {
+      const parsed = Number(order.orderNumber.split('-').at(-1))
+      return Number.isFinite(parsed) ? Math.max(highest, parsed) : highest
+    }, 0)
     const newOrder: Order = {
       ...orderData,
       id: `ORD-${Date.now()}`,
-      orderNumber: `LC-2026-${String(orders.length + 1).padStart(4, '0')}`,
+      orderNumber: `LC-${new Date().getFullYear()}-${String(highestNumber + 1).padStart(4, '0')}`,
       createdAt: new Date().toISOString(),
     }
     const updatedOrders = [...orders, newOrder]
@@ -399,14 +501,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setParts((prevParts) =>
       prevParts.map((part) => {
         if (part.id === partId) {
+          if (quantity <= 0 || part.stock < quantity) return part
           return {
             ...part,
-            stock: Math.max(0, part.stock - quantity),
+            stock: part.stock - quantity,
           }
         }
         return part
       })
     )
+  }
+
+  const adjustPartStock = (partId: string, change: number) => {
+    setParts((prevParts) => prevParts.map((part) => part.id === partId && part.stock + change >= 0
+      ? { ...part, stock: part.stock + change }
+      : part))
   }
 
   const value: AppContextType = {
@@ -420,6 +529,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     createOrder,
     updateOrderStatus,
     decrementPartStock,
+    adjustPartStock,
   }
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>

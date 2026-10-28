@@ -19,7 +19,7 @@ export default function CTA() {
             <ArrowRight className="w-5 h-5" />
           </a>
           <a
-            href="#"
+            href="#solution"
             className="inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-white bg-white/10 hover:bg-white/20 border border-white/30 rounded-lg transition-colors"
           >
             <Play className="w-5 h-5" />
@@ -27,7 +27,7 @@ export default function CTA() {
           </a>
         </div>
         <p className="mt-6 text-sm text-white/60">
-          Готовы к внедрению? <a href="#" className="text-white hover:underline">Свяжитесь с нами</a>
+          Готовы к внедрению? <a href="mailto:info@liftcare.kz?subject=Пилотный%20проект%20LiftCare" className="text-white hover:underline">Свяжитесь с нами</a>
         </p>
       </div>
     </section>

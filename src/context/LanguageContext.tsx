@@ -13,15 +13,10 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 const STORAGE_KEY = 'liftcare_language'
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>('ru')
-
-  // Load language from localStorage on mount
-  useEffect(() => {
-    const savedLang = localStorage.getItem(STORAGE_KEY) as Language
-    if (savedLang && (savedLang === 'ru' || savedLang === 'kk' || savedLang === 'en')) {
-      setLanguageState(savedLang)
-    }
-  }, [])
+  const [language, setLanguageState] = useState<Language>(() => {
+    const savedLanguage = localStorage.getItem(STORAGE_KEY) as Language
+    return savedLanguage === 'ru' || savedLanguage === 'kk' || savedLanguage === 'en' ? savedLanguage : 'ru'
+  })
 
   // Save language to localStorage whenever it changes
   useEffect(() => {

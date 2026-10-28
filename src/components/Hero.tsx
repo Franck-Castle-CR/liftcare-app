@@ -1,15 +1,4 @@
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { ArrowRight, FileText, Clock, CheckCircle2, Activity } from 'lucide-react'
-
-const mockData = [
-  { name: 'Пн', closed: 12 },
-  { name: 'Вт', closed: 18 },
-  { name: 'Ср', closed: 15 },
-  { name: 'Чт', closed: 22 },
-  { name: 'Пт', closed: 25 },
-  { name: 'Сб', closed: 8 },
-  { name: 'Вс', closed: 10 },
-]
 
 export default function Hero() {
   return (
@@ -39,7 +28,7 @@ export default function Hero() {
                 Создать заявку
               </a>
               <a
-                href="#"
+                href="mailto:info@liftcare.kz?subject=Презентация%20LiftCare"
                 className="inline-flex items-center gap-2 px-6 py-3 text-base font-medium text-text-secondary hover:text-text-primary transition-colors"
               >
                 Заказать презентацию
@@ -89,41 +78,12 @@ export default function Hero() {
               {/* Chart */}
               <div className="bg-gradient-to-br from-bg-light-blue to-white p-4 rounded-xl border border-gray-100">
                 <h3 className="text-sm font-medium text-text-primary mb-4">Динамика закрытия заявок</h3>
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={mockData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis
-                        dataKey="name"
-                        stroke="#64748B"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis
-                        stroke="#64748B"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#ffffff',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                        }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="closed"
-                        stroke="#1769AA"
-                        strokeWidth={2}
-                        dot={{ fill: '#1769AA', strokeWidth: 2, r: 4 }}
-                        activeDot={{ r: 6 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
+                <svg viewBox="0 0 640 220" role="img" aria-label="Динамика закрытия заявок за неделю" className="w-full h-48">
+                  {[35, 75, 115, 155].map((y) => <line key={y} x1="40" y1={y} x2="620" y2={y} stroke="#dbe4ec" strokeDasharray="5 6" />)}
+                  <polyline points="55,145 145,105 235,125 325,75 415,55 505,155 595,120" fill="none" stroke="#1769AA" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+                  {[[55,145],[145,105],[235,125],[325,75],[415,55],[505,155],[595,120]].map(([x, y]) => <circle key={x} cx={x} cy={y} r="7" fill="#1769AA" stroke="white" strokeWidth="3" />)}
+                  {['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map((day, index) => <text key={day} x={55 + index * 90} y="205" textAnchor="middle" fill="#64748B" fontSize="14">{day}</text>)}
+                </svg>
               </div>
             </div>
           </div>

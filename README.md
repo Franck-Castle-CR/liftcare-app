@@ -1,32 +1,44 @@
-# React + TypeScript + Vite
+# LiftCare
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Локальный демонстрационный MVP для управления заявками на ремонт и обслуживание промышленного оборудования. Приложение работает на React, TypeScript и Vite; данные сохраняются в `localStorage` браузера.
 
-Currently, two official plugins are available:
+## Запуск
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm ci
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Для проверки production-сборки:
+
+```bash
+npm run build
+npm run preview
+```
+
+## Демо-входы
+
+Пароль для всех аккаунтов: `demo123`.
+
+| Роль | Email |
+| --- | --- |
+| Клиент | `client@liftcare.kz` |
+| Диспетчер | `dispatcher@liftcare.kz` |
+| Инженер | `engineer@liftcare.kz` |
+| Инженер | `engineer2@liftcare.kz` |
+| Инженер | `engineer3@liftcare.kz` |
+| Инженер | `engineer4@liftcare.kz` |
+| Инженер | `engineer5@liftcare.kz` |
+| Инженер | `engineer6@liftcare.kz` – `engineer8@liftcare.kz` |
+| Руководитель | `manager@liftcare.kz` |
+| Клиенты организации | `client2@liftcare.kz` – `client5@liftcare.kz` |
+
+## Демонстрационный процесс
+
+Клиент регистрирует заявку и добавляет изображение. Диспетчер указывает приоритет, срок и инженера. Инженер проходит этапы поездки, прибытия, QR-паспорта, диагностики и чек-листа, выбирает запчасть, прикладывает фото и завершает работу. Сформированный акт клиент может распечатать или отправить через почтовый клиент, затем поставить оценку и закрыть заявку.
+
+Статусы и демонстрационные данные сохраняются локально в браузере. Для возврата к исходному набору демо-данных очистите данные сайта для локального адреса приложения.
+
+## Границы локального прототипа
+
+В проекте нет подключённого backend, реальной авторизации, почтовой отправки, облачного хранилища или PDF-сервиса. Входы демонстрационные, фотографии хранятся в браузере, а действие печати открывает системный диалог печати, где можно выбрать сохранение в PDF.

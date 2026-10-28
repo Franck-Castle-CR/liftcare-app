@@ -6,10 +6,20 @@ import StatusBadge from '../components/StatusBadge'
 import Modal from '../components/Modal'
 import { Clock, MapPin, User, AlertCircle } from 'lucide-react'
 
+function getDefaultDeadline(priority: string) {
+  const date = new Date()
+  date.setHours(date.getHours() + (priority === 'critical' ? 2 : 24))
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset())
+  return date.toISOString().slice(0, 16)
+}
+
 export default function DispatcherDashboard() {
-  const { user, orders, equipment, users, updateOrderStatus } = useApp()
+  const { orders, equipment, users, updateOrderStatus } = useApp()
   const { t } = useLanguage()
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [priorityFilter, setPriorityFilter] = useState('all')
+  const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'map'>('list')
   const [assignmentForm, setAssignmentForm] = useState({
     priority: 'medium' as 'low' | 'medium' | 'high' | 'critical',
     deadline: '',
@@ -18,6 +28,30 @@ export default function DispatcherDashboard() {
 
   const engineers = users.filter((u) => u.role === 'engineer')
   const newOrders = orders.filter((o) => o.status === 'new')
+  const visibleOrders = orders.filter((order) => {
+    const equipmentItem = equipment.find((item) => item.id === order.equipmentId)
+    const query = search.trim().toLocaleLowerCase('ru-RU')
+    const matchesQuery = !query || [order.orderNumber, order.title, order.description, equipmentItem?.name, equipmentItem?.location]
+      .some((value) => value?.toLocaleLowerCase('ru-RU').includes(query))
+    return matchesQuery && (priorityFilter === 'all' || order.priority === priorityFilter)
+  })
+  const locationStats = Array.from(equipment.reduce((map, item) => {
+    const current = map.get(item.location) ?? { name: item.location, assets: 0, openOrders: 0 }
+    current.assets += 1
+    current.openOrders = orders.filter((order) => order.equipmentId === item.id && !['completed', 'closed', 'cancelled'].includes(order.status)).length + current.openOrders
+    map.set(item.location, current)
+    return map
+  }, new Map<string, { name: string; assets: number; openOrders: number }>()).values())
+  const statusColumns = [
+    { id: 'new' as const, title: t.status.new },
+    { id: 'assigned' as const, title: t.status.assigned },
+    { id: 'traveling' as const, title: t.status.traveling },
+    { id: 'arrived' as const, title: t.status.arrived },
+    { id: 'in_progress' as const, title: t.status.inProgress },
+    { id: 'completed' as const, title: t.status.completed },
+    { id: 'closed' as const, title: t.status.closed },
+    { id: 'cancelled' as const, title: t.status.cancelled },
+  ]
 
   const handleOrderClick = (orderId: string) => {
     const order = orders.find((o) => o.id === orderId)
@@ -25,7 +59,7 @@ export default function DispatcherDashboard() {
       setSelectedOrder(orderId)
       setAssignmentForm({
         priority: order.priority,
-        deadline: '',
+        deadline: getDefaultDeadline(order.priority),
         assignedTo: '',
       })
     }
@@ -36,6 +70,7 @@ export default function DispatcherDashboard() {
       updateOrderStatus(selectedOrder, 'assigned', {
         priority: assignmentForm.priority,
         assignedTo: assignmentForm.assignedTo,
+        deadline: assignmentForm.deadline,
         assignedAt: new Date().toISOString(),
       })
       setSelectedOrder(null)
@@ -65,13 +100,13 @@ export default function DispatcherDashboard() {
   const getPriorityLabel = (priority: string) => {
     switch (priority) {
       case 'critical':
-        return t.dispatcher.criticalPriority
+        return t.client.critical
       case 'high':
-        return t.dispatcher.highPriority
+        return t.client.high
       case 'medium':
-        return t.dispatcher.mediumPriority
+        return t.client.medium
       case 'low':
-        return t.dispatcher.lowPriority
+        return t.client.low
       default:
         return priority
     }
@@ -81,7 +116,7 @@ export default function DispatcherDashboard() {
     <div className="flex min-h-screen bg-bg-light-blue">
       <Sidebar role="dispatcher" />
 
-      <main className="flex-1 ml-64 p-8">
+      <main className="flex-1 ml-64 p-8 max-md:ml-0 max-md:p-4 max-md:pt-16">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="mb-8">
@@ -122,20 +157,41 @@ export default function DispatcherDashboard() {
                 </div>
               )}
             </div>
-            <div className="divide-y divide-gray-200">
-              {orders.length === 0 ? (
+            <div className="flex flex-wrap gap-2 border-b border-gray-100 px-4 py-3" role="group" aria-label="Вид заявок">
+              <button onClick={() => setViewMode('list')} aria-pressed={viewMode === 'list'} className={`min-h-10 rounded-lg px-3 text-sm ${viewMode === 'list' ? 'bg-dark-blue text-white' : 'border border-gray-200 text-text-secondary'}`}>Список</button>
+              <button onClick={() => setViewMode('kanban')} aria-pressed={viewMode === 'kanban'} className={`min-h-10 rounded-lg px-3 text-sm ${viewMode === 'kanban' ? 'bg-dark-blue text-white' : 'border border-gray-200 text-text-secondary'}`}>Канбан</button>
+              <button onClick={() => setViewMode('map')} aria-pressed={viewMode === 'map'} className={`min-h-10 rounded-lg px-3 text-sm ${viewMode === 'map' ? 'bg-dark-blue text-white' : 'border border-gray-200 text-text-secondary'}`}>Карта объектов</button>
+            </div>
+            <div className="grid gap-3 border-b border-gray-100 p-4 sm:grid-cols-[1fr_220px]">
+              <label className="sr-only" htmlFor="order-search">Поиск заявок</label>
+              <input id="order-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Поиск по номеру, оборудованию или объекту" className="min-h-11 rounded-lg border border-gray-200 px-4 focus:outline-none focus:ring-2 focus:ring-primary-blue" />
+              <label className="sr-only" htmlFor="priority-filter">Фильтр по приоритету</label>
+              <select id="priority-filter" value={priorityFilter} onChange={(event) => setPriorityFilter(event.target.value)} className="min-h-11 rounded-lg border border-gray-200 px-3 focus:outline-none focus:ring-2 focus:ring-primary-blue">
+                <option value="all">Все приоритеты</option>
+                <option value="critical">Аварийный</option><option value="high">Высокий</option><option value="medium">Средний</option><option value="low">Низкий</option>
+              </select>
+            </div>
+            {viewMode === 'map' ? <div className="relative min-h-[380px] overflow-hidden bg-[#edf4f4] p-5" aria-label="Схема объектов обслуживания">
+              <div className="absolute inset-0 opacity-70" aria-hidden="true" style={{ backgroundImage: 'linear-gradient(28deg, transparent 46%, #fff 47%, #fff 50%, transparent 51%), linear-gradient(118deg, transparent 41%, #fff 42%, #fff 45%, transparent 46%), linear-gradient(90deg, rgba(22,105,170,.05) 1px, transparent 1px), linear-gradient(rgba(22,105,170,.05) 1px, transparent 1px)', backgroundSize: '100% 100%, 100% 100%, 32px 32px, 32px 32px' }} />
+              <p className="relative z-10 text-sm font-medium text-text-secondary">Демо-схема: нажмите на объект, чтобы отфильтровать заявки.</p>
+              {locationStats.map((location, index) => <button key={location.name} onClick={() => { setSearch(location.name); setViewMode('list') }} style={{ left: `${8 + (index * 31) % 78}%`, top: `${18 + (index * 43) % 68}%` }} className="absolute z-10 flex max-w-52 items-center gap-2 rounded-full border border-white bg-white px-3 py-2 text-left text-xs font-semibold text-dark-blue shadow-md hover:border-primary-blue"><MapPin size={16} className="shrink-0 text-primary-blue" /><span>{location.name}<small className="block font-normal text-text-secondary">{location.assets} ед. · {location.openOrders} активных заявок</small></span></button>)}
+            </div> : viewMode === 'kanban' ? <div className="flex gap-4 overflow-x-auto p-4">{statusColumns.map((column) => <section key={column.id} className="w-64 shrink-0 rounded-xl bg-gray-50 p-3"><h3 className="mb-3 flex items-center justify-between font-semibold text-dark-blue">{column.title}<span className="rounded-full bg-white px-2 py-1 text-xs text-text-secondary">{visibleOrders.filter((order) => order.status === column.id).length}</span></h3><div className="space-y-3">{visibleOrders.filter((order) => order.status === column.id).map((order) => <button key={order.id} disabled={order.status !== 'new'} title={order.status === 'new' ? 'Открыть назначение инженера' : 'Карточка доступна для просмотра'} onClick={() => handleOrderClick(order.id)} className="w-full rounded-lg border border-gray-200 bg-white p-3 text-left hover:border-primary-blue disabled:cursor-default disabled:hover:border-gray-200"><span className="font-mono text-xs text-text-secondary">{order.orderNumber}</span><span className="mt-1 block text-sm font-semibold text-dark-blue">{order.title}</span><span className="mt-2 block text-xs text-text-secondary">{getPriorityLabel(order.priority)}</span></button>)}</div></section>)}</div> : <div className="divide-y divide-gray-200">
+              {visibleOrders.length === 0 ? (
                 <div className="p-12 text-center text-text-secondary">
-                  {t.common.noData}
+                  {orders.length === 0 ? t.common.noData : 'По заданным условиям заявки не найдены.'}
                 </div>
               ) : (
-                orders.map((order) => {
+                visibleOrders.map((order) => {
                   const eq = equipment.find((e) => e.id === order.equipmentId)
                   const assignedEngineer = users.find((u) => u.id === order.assignedTo)
                   return (
                     <div
                       key={order.id}
                       onClick={() => handleOrderClick(order.id)}
-                      className={`p-6 hover:bg-gray-50 transition-colors cursor-pointer ${
+                      onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') handleOrderClick(order.id) }}
+                      role={order.status === 'new' ? 'button' : undefined}
+                      tabIndex={order.status === 'new' ? 0 : undefined}
+                      className={`p-6 hover:bg-gray-50 transition-colors ${order.status === 'new' ? 'cursor-pointer' : 'cursor-default'} ${
                         order.status === 'new' ? 'bg-primary-blue/5 border-l-4 border-l-primary-blue' : ''
                       }`}
                     >
@@ -172,7 +228,7 @@ export default function DispatcherDashboard() {
                   )
                 })
               )}
-            </div>
+            </div>}
           </div>
         </div>
       </main>
@@ -197,16 +253,16 @@ export default function DispatcherDashboard() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">{t.dispatcher.priority}</label>
+                <label className="block text-sm font-medium text-text-primary mb-2">{t.client.priority}</label>
                 <select
                   value={assignmentForm.priority}
                   onChange={(e) => setAssignmentForm({ ...assignmentForm, priority: e.target.value as any })}
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-blue"
                 >
-                  <option value="low">{t.dispatcher.lowPriority}</option>
-                  <option value="medium">{t.dispatcher.mediumPriority}</option>
-                  <option value="high">{t.dispatcher.highPriority}</option>
-                  <option value="critical">{t.dispatcher.criticalPriority}</option>
+                  <option value="low">{t.client.low}</option>
+                  <option value="medium">{t.client.medium}</option>
+                  <option value="high">{t.client.high}</option>
+                  <option value="critical">{t.client.critical}</option>
                 </select>
               </div>
 

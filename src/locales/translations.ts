@@ -266,8 +266,11 @@ export const translations = {
     status: {
       new: 'Новая',
       assigned: 'Инженер назначен',
+      traveling: 'В пути',
+      arrived: 'На объекте',
       inProgress: 'В работе',
-      completed: 'Закрыто',
+      completed: 'Ожидает подтверждения',
+      closed: 'Закрыто',
       cancelled: 'Отменено',
     },
 
@@ -545,8 +548,11 @@ export const translations = {
     status: {
       new: 'Жаңа',
       assigned: 'Инженер тағайындалды',
+      traveling: 'Жолда',
+      arrived: 'Нысанда',
       inProgress: 'Жұмыс істеуде',
-      completed: 'Жабық',
+      completed: 'Растауды күтуде',
+      closed: 'Жабық',
       cancelled: 'Болдырылды',
     },
 
@@ -824,8 +830,11 @@ export const translations = {
     status: {
       new: 'New',
       assigned: 'Engineer Assigned',
+      traveling: 'On the way',
+      arrived: 'On site',
       inProgress: 'In Progress',
-      completed: 'Closed',
+      completed: 'Awaiting confirmation',
+      closed: 'Closed',
       cancelled: 'Cancelled',
     },
 

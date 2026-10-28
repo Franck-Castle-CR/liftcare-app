@@ -1,12 +1,14 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { lazy, Suspense } from 'react'
 import { AppProvider, useApp } from './context/AppContext'
 import { LanguageProvider } from './context/LanguageContext'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
-import ClientDashboard from './pages/ClientDashboard'
-import DispatcherDashboard from './pages/DispatcherDashboard'
-import EngineerDashboard from './pages/EngineerDashboard'
-import ManagerDashboard from './pages/ManagerDashboard'
+
+const ClientDashboard = lazy(() => import('./pages/ClientDashboard'))
+const DispatcherDashboard = lazy(() => import('./pages/DispatcherDashboard'))
+const EngineerDashboard = lazy(() => import('./pages/EngineerDashboard'))
+const ManagerDashboard = lazy(() => import('./pages/ManagerDashboard'))
 
 function ProtectedRoute({ children, allowedRole }: { children: React.ReactNode; allowedRole?: string }) {
   const { user } = useApp()
@@ -26,6 +28,7 @@ function AppRoutes() {
   const { user } = useApp()
 
   return (
+    <Suspense fallback={<div role="status" className="min-h-screen grid place-items-center text-dark-blue">Загрузка LiftCare…</div>}>
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route
@@ -65,6 +68,7 @@ function AppRoutes() {
         }
       />
     </Routes>
+    </Suspense>
   )
 }
 

@@ -1,6 +1,6 @@
 export type UserRole = 'client' | 'dispatcher' | 'engineer' | 'manager'
 
-export type OrderStatus = 'new' | 'assigned' | 'in_progress' | 'completed' | 'cancelled'
+export type OrderStatus = 'new' | 'assigned' | 'traveling' | 'arrived' | 'in_progress' | 'completed' | 'closed' | 'cancelled'
 
 export interface User {
   id: string
@@ -34,6 +34,9 @@ export interface Equipment {
 export interface Part {
   id: string
   name: string
+  manufacturer?: string
+  warehouse?: string
+  compatibleEquipment?: string[]
   stock: number
   unit: string
   minStock: number
@@ -52,6 +55,13 @@ export interface Order {
   createdAt: string
   assignedTo?: string
   assignedAt?: string
+  deadline?: string
+  tripStartedAt?: string
+  arrivedAt?: string
+  qrScannedAt?: string
+  checklist?: string[]
+  rating?: number
+  confirmedAt?: string
   startedAt?: string
   completedAt?: string
   diagnosis?: string

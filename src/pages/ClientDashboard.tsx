@@ -4,15 +4,17 @@ import { useLanguage } from '../context/LanguageContext'
 import Sidebar from '../components/Sidebar'
 import StatusBadge from '../components/StatusBadge'
 import Modal from '../components/Modal'
-import { Plus, Calendar, MapPin, Upload, Star, CheckCircle } from 'lucide-react'
+import { Plus, Calendar, MapPin, Upload, CheckCircle } from 'lucide-react'
+import { compressImage } from '../utils/image'
 
 export default function ClientDashboard() {
-  const { user, equipment, orders, createOrder, updateOrderStatus } = useApp()
+  const { user, equipment, orders, createOrder, updateOrderStatus, users, parts } = useApp()
   const { t } = useLanguage()
   const [showOrderModal, setShowOrderModal] = useState(false)
   const [showActModal, setShowActModal] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null)
   const [rating, setRating] = useState(0)
+  const [photoError, setPhotoError] = useState('')
   const [orderForm, setOrderForm] = useState({
     equipmentId: '',
     title: '',
@@ -43,15 +45,23 @@ export default function ClientDashboard() {
     })
   }
 
-  const handlePhotoUpload = () => {
-    const fakePhoto = 'https://via.placeholder.com/400x300/1769AA/ffffff?text=Фото+неисправности'
-    setOrderForm({ ...orderForm, photo: fakePhoto })
+  const handlePhotoUpload = async (file?: File) => {
+    if (!file || !file.type.startsWith('image/')) return
+    setPhotoError('')
+    try {
+      const image = await compressImage(file)
+      setOrderForm((current) => ({ ...current, photo: image }))
+    } catch (error) {
+      setPhotoError(error instanceof Error ? error.message : 'Не удалось загрузить фотографию.')
+    }
   }
 
   const handleConfirmAct = () => {
     if (selectedOrder) {
-      updateOrderStatus(selectedOrder, 'completed', {
+      updateOrderStatus(selectedOrder, 'closed', {
         notes: `${t.client.ratingNote}: ${rating} ★`,
+        rating,
+        confirmedAt: new Date().toISOString(),
       })
       setShowActModal(false)
       setSelectedOrder(null)
@@ -59,11 +69,16 @@ export default function ClientDashboard() {
     }
   }
 
+  const actOrder = orders.find((order) => order.id === selectedOrder)
+  const actEquipment = equipment.find((item) => item.id === actOrder?.equipmentId)
+  const actEngineer = users.find((item) => item.id === actOrder?.assignedTo)
+  const actParts = actOrder?.partsUsed?.map(({ partId, quantity }) => ({ part: parts.find((item) => item.id === partId), quantity })) ?? []
+
   return (
     <div className="flex min-h-screen bg-bg-light-blue">
       <Sidebar role="client" />
 
-      <main className="flex-1 ml-64 p-8">
+      <main className="flex-1 ml-64 p-8 max-md:ml-0 max-md:p-4 max-md:pt-16">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
@@ -89,7 +104,7 @@ export default function ClientDashboard() {
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
               <p className="text-text-secondary text-sm mb-2">{t.client.activeOrders}</p>
               <p className="text-3xl font-bold text-primary-blue">
-                {userOrders.filter((o) => o.status !== 'completed' && o.status !== 'cancelled').length}
+                {userOrders.filter((o) => !['completed', 'closed', 'cancelled'].includes(o.status)).length}
               </p>
             </div>
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
@@ -120,7 +135,9 @@ export default function ClientDashboard() {
                         </span>
                       </div>
                     </div>
-                    <StatusBadge status={eq.status === 'active' ? 'completed' : eq.status === 'broken' ? 'cancelled' : 'in_progress'} />
+                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${eq.status === 'active' ? 'bg-success-green/10 text-success-green' : eq.status === 'broken' ? 'bg-danger-red/10 text-danger-red' : 'bg-warning-yellow/10 text-warning-yellow'}`}>
+                      {eq.status === 'active' ? 'Работает' : eq.status === 'broken' ? 'Неисправно' : 'На ТО'}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -242,13 +259,15 @@ export default function ClientDashboard() {
             ) : (
               <button
                 type="button"
-                onClick={handlePhotoUpload}
+                onClick={() => document.getElementById('client-order-photo')?.click()}
                 className="w-full px-4 py-8 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-blue transition-colors flex flex-col items-center gap-2"
               >
                 <Upload className="w-8 h-8 text-text-secondary" />
                 <span className="text-sm text-text-secondary">{t.client.uploadPhotoBtn}</span>
               </button>
             )}
+            <input id="client-order-photo" type="file" accept="image/*" capture="environment" className="sr-only" onChange={(event) => handlePhotoUpload(event.target.files?.[0])} />
+            {photoError && <p role="alert" className="mt-2 text-sm text-danger-red">{photoError}</p>}
           </div>
 
           <div className="flex gap-3 pt-4">
@@ -272,11 +291,24 @@ export default function ClientDashboard() {
       {/* Electronic Act Modal */}
       <Modal isOpen={showActModal} onClose={() => setShowActModal(false)} title={t.client.workCompleted}>
         <div className="space-y-6">
-          <div className="bg-bg-light-blue rounded-lg p-6">
-            <h3 className="font-semibold text-dark-blue mb-4">{t.client.workCompleted}</h3>
-            <p className="text-text-secondary mb-4">
-              {t.client.workCompletedDesc}
-            </p>
+          <article className="bg-white border border-gray-200 rounded-lg p-5 space-y-3 text-sm" id="electronic-act">
+            <div className="flex justify-between gap-4"><h3 className="font-bold text-dark-blue text-lg">Электронный акт выполненных работ</h3><span className="font-mono">{actOrder?.orderNumber}</span></div>
+            <p><strong>Дата:</strong> {actOrder?.completedAt ? new Date(actOrder.completedAt).toLocaleString('ru-RU') : '—'}</p>
+            <p><strong>Клиент:</strong> {user?.name}</p>
+            <p><strong>Объект и оборудование:</strong> {actEquipment?.location} · {actEquipment?.name}</p>
+            <p><strong>Неисправность:</strong> {actOrder?.title} — {actOrder?.description}</p>
+            <p><strong>Диагностика и работы:</strong> {actOrder?.diagnosis || actOrder?.notes || 'Работы выполнены'}</p>
+            <p><strong>Инженер:</strong> {actEngineer?.name ?? 'Не назначен'}</p>
+            <p><strong>Начало и окончание работ:</strong> {actOrder?.startedAt ? new Date(actOrder.startedAt).toLocaleString('ru-RU') : '—'} · {actOrder?.completedAt ? new Date(actOrder.completedAt).toLocaleString('ru-RU') : '—'}</p>
+            <p><strong>Запчасти:</strong> {actParts.length ? actParts.map(({ part, quantity }) => `${part?.name ?? 'Запчасть'} × ${quantity}`).join(', ') : 'Не использовались'}</p>
+            <p><strong>Подпись инженера:</strong> {actEngineer?.name ?? '—'}</p>
+            <p><strong>Подпись клиента:</strong> подтверждается при закрытии акта с оценкой</p>
+            {actOrder?.photos?.[0] && <img src={actOrder.photos[0]} alt="Фото результата ремонта" className="max-h-48 rounded-lg object-cover" />}
+          </article>
+
+          <div className="flex flex-wrap gap-3">
+            <button type="button" onClick={() => window.print()} className="min-h-11 px-4 border border-gray-200 rounded-lg hover:bg-gray-50">Скачать PDF / печать</button>
+            <button type="button" onClick={() => { const subject = encodeURIComponent(`Акт ${actOrder?.orderNumber}`); const body = encodeURIComponent(`Акт по заявке ${actOrder?.orderNumber} готов к просмотру в LiftCare.`); window.location.href = `mailto:${user?.email}?subject=${subject}&body=${body}` }} className="min-h-11 px-4 border border-gray-200 rounded-lg hover:bg-gray-50">Отправить клиенту</button>
           </div>
 
           <div>
@@ -287,6 +319,8 @@ export default function ClientDashboard() {
                   key={star}
                   type="button"
                   onClick={() => setRating(star)}
+                  aria-label={`Оценка ${star} из 5`}
+                  aria-pressed={star === rating}
                   className={`p-2 text-2xl transition-colors ${star <= rating ? 'text-warning-yellow' : 'text-gray-300'}`}
                 >
                   ★
