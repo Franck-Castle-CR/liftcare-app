@@ -348,7 +348,7 @@ initialOrders[0] = {
   partsUsed: undefined,
   photos: [],
 }
-initialOrders[1] = { ...initialOrders[1], title: 'Посторонний шум при движении', description: 'Во время движения лифта слышен посторонний шум в шахте. Нужен осмотр тягового узла.', status: 'assigned', priority: 'high', createdAt: '2026-10-27T10:00:00.000Z', assignedTo: '3', assignedAt: new Date().toISOString(), startedAt: undefined, completedAt: undefined, diagnosis: undefined, partsUsed: [], photos: [] }
+initialOrders[1] = { ...initialOrders[1], title: 'Эскалатор KONE остановился во время работы', description: 'Эскалатор не запускается после остановки. Просим проверить систему управления, привод и устройства безопасности, определить причину неисправности и восстановить работу.', status: 'assigned', priority: 'high', createdAt: '2026-10-27T10:00:00.000Z', assignedTo: '3', assignedAt: new Date().toISOString(), startedAt: undefined, completedAt: undefined, diagnosis: undefined, partsUsed: [], photos: [] }
 initialOrders[2] = { ...initialOrders[2], title: 'Плановая замена троса', description: 'Плановая замена изношенного тягового троса пассажирского лифта.', status: 'new', priority: 'medium', createdAt: '2026-10-28T06:30:00.000Z', assignedTo: undefined, assignedAt: undefined, startedAt: undefined, completedAt: undefined, diagnosis: undefined, partsUsed: [], photos: [] }
 initialOrders.push(
   {
@@ -406,13 +406,28 @@ const saveToStorage = <T,>(key: string, value: T): void => {
   }
 }
 
+const loadOrdersFromStorage = (): Order[] => {
+  const savedOrders = loadFromStorage<Order[]>(STORAGE_KEYS.ORDERS, initialOrders)
+  return savedOrders.map((order) =>
+    order.orderNumber === 'LC-2026-0002' &&
+    order.equipmentId === 'EQ-002' &&
+    order.title === 'Посторонний шум при движении'
+      ? {
+          ...order,
+          title: 'Эскалатор KONE остановился во время работы',
+          description: 'Эскалатор не запускается после остановки. Просим проверить систему управления, привод и устройства безопасности, определить причину неисправности и восстановить работу.',
+        }
+      : order,
+  )
+}
+
 // Provider component
 export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => loadFromStorage<User | null>(STORAGE_KEYS.USER, null))
   const [users] = useState<User[]>(() => loadFromStorage<User[]>(STORAGE_KEYS.USERS, initialUsers))
   const [equipment] = useState<Equipment[]>(() => loadFromStorage<Equipment[]>(STORAGE_KEYS.EQUIPMENT, initialEquipment))
   const [parts, setParts] = useState<Part[]>(() => loadFromStorage<Part[]>(STORAGE_KEYS.PARTS, initialParts))
-  const [orders, setOrders] = useState<Order[]>(() => loadFromStorage<Order[]>(STORAGE_KEYS.ORDERS, initialOrders))
+  const [orders, setOrders] = useState<Order[]>(loadOrdersFromStorage)
 
   // Save to localStorage whenever data changes
   useEffect(() => {
