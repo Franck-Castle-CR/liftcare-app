@@ -71,6 +71,13 @@ export default function EngineerDashboard() {
     setShowDiagnosis(false)
   }
 
+  const annulDiagnosis = () => {
+    if (!activeOrder || !window.confirm('Аннулировать диагностику? Текст причины и отметки чек-листа будут удалены. Заявка останется в работе.')) return
+    updateOrderStatus(activeOrder.id, 'in_progress', { diagnosis: undefined, checklist: [] })
+    setDiagnosis('')
+    setCheckedItems([])
+  }
+
   const finishWork = () => {
     const resultPhoto = photo ?? activeOrder?.photos?.[0]
     if (!activeOrder || !resultPhoto) return
@@ -147,6 +154,7 @@ export default function EngineerDashboard() {
                       <h3 className="font-semibold text-dark-blue mb-1">Результат диагностики</h3>
                       <p className="text-sm text-text-secondary">{activeOrder.diagnosis}</p>
                       <button onClick={openDiagnosis} className="text-sm text-primary-blue font-medium mt-2 underline">Изменить чек-лист и диагноз</button>
+                      <button onClick={annulDiagnosis} className="block text-sm text-danger-red font-medium mt-2 underline">Аннулировать диагностику</button>
                     </div>
                     <div>
                       <label htmlFor="part-select" className="block text-sm font-medium text-text-primary mb-2">Использованная запчасть</label>
